@@ -1,0 +1,71 @@
+/* src/App.css (LIMPIO Y GLOBAL) */
+
+/* --- GENERAL & LAYOUT --- */
+.App {
+  text-align: center;
+  min-height: 100vh;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 10vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+  padding: 10px 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.App-main {
+  padding: 20px;
+  background-color: #f0f0f0;
+  min-height: 90vh;
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+/* --- BUTTONS --- */
+.btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.1s;
+  background-color: #61dafb; /* Azul React */
+  color: #282c34;
+}
+
+.btn:hover {
+  background-color: #3bbfef;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #c0392b;
+}
+
+.btn-seller {
+  background-color: #f39c12; /* Naranja/Ámbar */
+  color: white;
+}
+
+.btn-seller:hover {
+  background-color: #e67e22;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: #282c34;
+}

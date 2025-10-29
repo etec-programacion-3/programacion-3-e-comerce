@@ -1,0 +1,65 @@
+/* src/components/ProductManagement.css */
+
+.manage-products-container {
+    max-width: 900px;
+    margin: 20px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.product-management-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 0;
+}
+
+.product-management-card {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 5px solid #f39c12; /* Resalte de Vendedor */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    transition: transform 0.2s;
+}
+
+.product-management-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.product-image-thumb {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.product-details {
+    flex-grow: 1;
+    text-align: left;
+    color: #282c34;
+}
+
+.product-details h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.1em;
+}
+
+.product-details p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.product-actions {
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+}
