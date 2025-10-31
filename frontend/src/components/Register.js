@@ -1,8 +1,11 @@
-// src/components/Register.js (MODIFICADO)
+// src/components/Register.js (CORREGIDO)
 import React, { useState } from 'react';
-import { toast } from 'react-hot-toast'; // <--- NUEVO: Importa toast
+import { toast } from 'react-hot-toast'; 
 import './Forms.css';
-const Register = () => {
+// Recibimos onSuccess como prop
+const Register = ({ onSuccess }) => {
+  // const navigate = useNavigate(); <--- YA NO ES NECESARIO
+    
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -31,17 +34,25 @@ const Register = () => {
 
       if (res.ok && data.success) {
         console.log(data);
-        toast.success('✅ ¡Usuario registrado exitosamente! Ahora puedes iniciar sesión.'); // <--- CAMBIO
+        toast.success('✅ ¡Usuario registrado exitosamente! Redirigiendo a Login...');
+        
+        // ¡CAMBIO CLAVE! Llama al callback onSuccess para actualizar App.js
+        setTimeout(() => {
+            if (onSuccess) {
+                onSuccess(); // Esto llama a setView('login')
+            }
+        }, 1500); 
+        
       } else {
         const errorMessage = data.errors 
             ? data.errors.map(err => err.msg).join(', ') 
             : data.message || 'Error desconocido del servidor.';
-        toast.error(`❌ Error al registrar: ${errorMessage}`); // <--- CAMBIO
+        toast.error(`❌ Error al registrar: ${errorMessage}`); 
       }
 
     } catch (error) {
       console.error(error);
-      toast.error('Error al registrar. Revisa la consola.'); // <--- CAMBIO
+      toast.error('Error al registrar. Revisa la consola.'); 
     }
   };
 

@@ -1,10 +1,12 @@
-// src/components/ProductList.js
-import React, { useState, useEffect } from 'react';
+// src/components/ProductList.js (CORREGIDO)
+import React, { useState, useEffect, useCallback } from 'react'; // <--- 1. Importamos useCallback
 
 const ProductList = () => {
+  // Inicializamos products como un array vacío para evitar errores de map/length
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
   // Estados para gestionar los filtros de búsqueda
   const [filters, setFilters] = useState({
     search: '',
@@ -15,8 +17,9 @@ const ProductList = () => {
   });
 
   const categories = ['electronics', 'clothing', 'books', 'home', 'sports', 'toys', 'other'];
-
-  const fetchProducts = async () => {
+  
+  // 2. Envolvemos la función con useCallback y dependemos de 'filters'
+  const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -34,22 +37,27 @@ const ProductList = () => {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setProducts(data.data);
+        // Aseguramos que data.data sea un array antes de guardarlo
+        setProducts(Array.isArray(data.data) ? data.data : []); 
       } else {
+        // Si hay error en la respuesta, aseguramos que products sea un array vacío
+        setProducts([]);
         throw new Error(data.message || 'Error al obtener productos');
       }
     } catch (err) {
       console.error('Fetch products error:', err);
       setError(err.message);
+      // Aseguramos que sea un array vacío al fallar la conexión/API
+      setProducts([]); 
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]); // <--- Dependencia de useCallback: solo cambia cuando 'filters' cambia
 
   // Vuelve a llamar a fetchProducts cada vez que los filtros cambian
   useEffect(() => {
     fetchProducts();
-  }, [filters]); 
+  }, [filters, fetchProducts]); // <--- 3. Incluimos 'fetchProducts' para eliminar la advertencia
 
   const handleFilterChange = (e) => {
     setFilters({ 
@@ -132,10 +140,10 @@ const ProductList = () => {
       {error && <p style={{ color: 'red' }}>Error: {error}</p>}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
-        {products.map(product => (
+        {products && products.map(product => (
           <div key={product._id} style={productStyle}>
-            {/* Si no hay imagen, muestra un placeholder con un color diferente para distinguirlo */}
-            {product.images.length > 0 && 
+            {/* Chequeo de existencia de product.images para evitar errores de renderizado */}
+            {product.images && product.images.length > 0 && 
               <img src={product.images[0].replace('https://via.placeholder.com/300', 'https://via.placeholder.com/280/0000FF/FFFFFF?text=PRODUCT+IMAGE')} alt={product.name} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '5px 5px 0 0' }} />
             }
             <h3>{product.name}</h3>

@@ -16,7 +16,7 @@ const CreateProduct = () => {
   });
 
   const { name, description, price, stock, category, image } = formData;
-  const PORT = 5000; // Puerto del backend
+  
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -39,7 +39,7 @@ const CreateProduct = () => {
     };
 
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/products`, {
+      const res = await fetch(`http://localhost:4000/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

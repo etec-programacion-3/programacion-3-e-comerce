@@ -39,7 +39,7 @@ const ManageProducts = () => {
         setLoading(true);
         try {
             // Usa la ruta pública GET /api/products/seller/:sellerId
-            const res = await fetch(`http://localhost:${PORT}/api/products/seller/${id}`);
+            const res = await fetch(`http://localhost:4000/api/products/seller/${id}`);
             const data = await res.json();
 
             if (res.ok && data.success) {
