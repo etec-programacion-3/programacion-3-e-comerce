@@ -1,25 +1,30 @@
-// src/components/CreateProduct.js (MODIFICADO)
+// Frontend/src/components/CreateProduct.js (CON SUBIDA DE IMÁGENES)
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast';
+import ImageUploader from './ImageUploader';
+import './Forms.css';
 
-// Categorías actualizadas según productValidation.js
 const categories = ['Electrónica', 'Ropa', 'Hogar', 'Deportes', 'Libros', 'Juguetes', 'Alimentos', 'Otros']; 
 
-const CreateProduct = () => {
+const CreateProduct = ({ onProductCreated }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: '',
     stock: '',
     category: categories[0],
-    image: 'https://via.placeholder.com/400x300?text=Producto' // Campo de imagen único
+    image: '' // Se llenará desde ImageUploader
   });
 
   const { name, description, price, stock, category, image } = formData;
-  
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // ✅ NUEVO: Callback cuando se sube una imagen
+  const handleImageUploaded = (imageUrl) => {
+    setFormData({ ...formData, image: imageUrl });
   };
 
   const onSubmit = async (e) => {
@@ -31,11 +36,19 @@ const CreateProduct = () => {
       return;
     }
 
-    // Convertir precio y stock a tipos numéricos para el backend
+    // Validación: La imagen es requerida
+    if (!image) {
+      toast.error('Debes subir una imagen del producto');
+      return;
+    }
+
     const productData = {
-        ...formData,
-        price: parseFloat(price),
-        stock: parseInt(stock)
+      name,
+      description,
+      price: parseFloat(price),
+      stock: parseInt(stock),
+      category,
+      image
     };
 
     try {
@@ -52,6 +65,7 @@ const CreateProduct = () => {
 
       if (res.ok && data.success) {
         toast.success(`Producto "${data.data.name}" creado con éxito.`);
+        
         // Limpiar formulario
         setFormData({
           name: '',
@@ -59,14 +73,18 @@ const CreateProduct = () => {
           price: '',
           stock: '',
           category: categories[0],
-          image: 'https://via.placeholder.com/400x300?text=Producto'
+          image: ''
         });
+
+        // Notificar al componente padre
+        if (onProductCreated) {
+          onProductCreated(data.data);
+        }
       } else {
-        // Manejo de errores detallado (incluyendo validación de express-validator)
         const errorMessage = data.errors 
-            ? data.errors.map(err => err.msg || err.message).join(', ') 
-            : data.message || 'Error desconocido.';
-            
+          ? data.errors.map(err => err.msg || err.message).join(', ') 
+          : data.message || 'Error desconocido.';
+        
         toast.error(`Error al crear producto: ${errorMessage}`);
       }
     } catch (error) {
@@ -79,6 +97,14 @@ const CreateProduct = () => {
     <form onSubmit={onSubmit} className="form-container" style={{maxWidth: '600px'}}>
       <h2>Crear Nuevo Producto</h2>
       
+      {/* ✅ NUEVO: Componente de subida de imágenes */}
+      <ImageUploader
+        currentImage={image}
+        onImageUploaded={handleImageUploaded}
+        type="products"
+        label="Imagen del Producto *"
+      />
+
       <input 
         type="text" 
         name="name" 
@@ -86,6 +112,8 @@ const CreateProduct = () => {
         onChange={onChange} 
         placeholder="Nombre del Producto (3-100 caracteres)" 
         required 
+        minLength={3}
+        maxLength={100}
       />
       
       <textarea 
@@ -95,6 +123,8 @@ const CreateProduct = () => {
         placeholder="Descripción del Producto (10-2000 caracteres)" 
         rows="4"
         required 
+        minLength={10}
+        maxLength={2000}
       />
       
       <div style={{ display: 'flex', gap: '15px' }}>
@@ -126,16 +156,6 @@ const CreateProduct = () => {
           <option key={cat} value={cat}>{cat}</option>
         ))}
       </select>
-
-      <input 
-        type="url" 
-        name="image" 
-        value={image} 
-        onChange={onChange} 
-        placeholder="URL de la Imagen (Opcional)" 
-      />
-      
-      <p style={{fontSize: '0.8em', color: '#666', textAlign: 'center'}}>*El sistema utiliza el puerto 5000 para el backend.</p>
 
       <button type="submit" className="btn btn-primary">
         Publicar Producto

@@ -1,0 +1,30 @@
+/* src/components/UserProfileConfig.css */
+
+.profile-config-container {
+    max-width: 700px;
+    margin: 30px auto;
+    padding: 20px;
+    text-align: center;
+}
+
+.profile-config-container h2 {
+    color: #282c34;
+    margin-bottom: 25px;
+    font-size: 2em;
+}
+
+.user-config-form {
+    /* La clase form-container se encarga de la base (fondo blanco, sombra) */
+    gap: 15px;
+}
+
+.form-section-title {
+    margin-top: 15px;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #61dafb;
+    font-weight: bold;
+    color: #282c34;
+    font-size: 1.1em;
+    text-align: left;
+}

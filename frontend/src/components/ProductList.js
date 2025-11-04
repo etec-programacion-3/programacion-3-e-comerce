@@ -1,63 +1,61 @@
-// src/components/ProductList.js (CORREGIDO)
-import React, { useState, useEffect, useCallback } from 'react'; // <--- 1. Importamos useCallback
+// src/components/ProductList.js (COMPLETAMENTE CORREGIDO)
+import React, { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-hot-toast';
 
-const ProductList = () => {
-  // Inicializamos products como un array vacío para evitar errores de map/length
+const ProductList = ({ refreshTrigger }) => { // ← AGREGADO: refreshTrigger para actualizar
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Estados para gestionar los filtros de búsqueda
   const [filters, setFilters] = useState({
     search: '',
     category: '',
     minPrice: '',
-    maxPrice: '',
-    sort: '-createdAt' // Ordenamiento por defecto: más reciente
+    maxPrice: ''
   });
 
-  const categories = ['electronics', 'clothing', 'books', 'home', 'sports', 'toys', 'other'];
+  // ✅ CORREGIDO: Categorías según el backend
+  const categories = ['Electrónica', 'Ropa', 'Hogar', 'Deportes', 'Libros', 'Juguetes', 'Alimentos', 'Otros'];
   
-  // 2. Envolvemos la función con useCallback y dependemos de 'filters'
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // Construir la cadena de consulta (query string) a partir de los filtros
       const queryParams = new URLSearchParams();
-      Object.keys(filters).forEach(key => {
-        if (filters[key]) {
-          queryParams.append(key, filters[key]);
-        }
-      });
       
-      const url = `http://localhost:4000/api/products?${queryParams.toString()}`;
+      // Agregar filtros solo si tienen valor
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.category) queryParams.append('category', filters.category);
+      if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
+      
+      const url = `http://localhost:4000/api/products?${queryParams.toString()}`; // ← Puerto 4000
+      console.log('Fetching products from:', url);
       
       const res = await fetch(url);
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Aseguramos que data.data sea un array antes de guardarlo
         setProducts(Array.isArray(data.data) ? data.data : []); 
+        console.log('Products loaded:', data.data.length);
       } else {
-        // Si hay error en la respuesta, aseguramos que products sea un array vacío
         setProducts([]);
         throw new Error(data.message || 'Error al obtener productos');
       }
     } catch (err) {
       console.error('Fetch products error:', err);
       setError(err.message);
-      // Aseguramos que sea un array vacío al fallar la conexión/API
       setProducts([]); 
+      toast.error('Error al cargar productos');
     } finally {
       setLoading(false);
     }
-  }, [filters]); // <--- Dependencia de useCallback: solo cambia cuando 'filters' cambia
+  }, [filters]);
 
-  // Vuelve a llamar a fetchProducts cada vez que los filtros cambian
+  // ✅ NUEVO: Se ejecuta cuando refreshTrigger cambia (desde App.js)
   useEffect(() => {
     fetchProducts();
-  }, [filters, fetchProducts]); // <--- 3. Incluimos 'fetchProducts' para eliminar la advertencia
+  }, [filters, fetchProducts, refreshTrigger]);
 
   const handleFilterChange = (e) => {
     setFilters({ 
@@ -68,7 +66,15 @@ const ProductList = () => {
   
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    // La búsqueda se activa automáticamente al cambiar el estado de 'filters'
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
+      minPrice: '',
+      maxPrice: ''
+    });
   };
 
   const productStyle = {
@@ -87,8 +93,19 @@ const ProductList = () => {
       <h2>Catálogo de Productos ({products.length})</h2>
 
       {/* Formulario de Filtro y Búsqueda */}
-      <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px', padding: '10px', border: '1px solid #61dafb', borderRadius: '8px', backgroundColor: '#333' }}>
-        
+      <form 
+        onSubmit={handleSearchSubmit} 
+        style={{ 
+          display: 'flex', 
+          gap: '10px', 
+          flexWrap: 'wrap', 
+          marginBottom: '20px', 
+          padding: '15px', 
+          border: '1px solid #61dafb', 
+          borderRadius: '8px', 
+          backgroundColor: '#f9f9f9' 
+        }}
+      >
         <input 
           type="text" 
           name="search" 
@@ -98,10 +115,15 @@ const ProductList = () => {
           style={{ padding: '8px', flex: '2', minWidth: '200px' }}
         />
         
-        <select name="category" value={filters.category} onChange={handleFilterChange} style={{ padding: '8px', flex: '1' }}>
+        <select 
+          name="category" 
+          value={filters.category} 
+          onChange={handleFilterChange} 
+          style={{ padding: '8px', flex: '1' }}
+        >
           <option value="">Todas las categorías</option>
           {categories.map(cat => (
-            <option key={cat} value={cat}>{cat.charAt(0).toUpperCase() + cat.slice(1)}</option>
+            <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
         
@@ -112,6 +134,8 @@ const ProductList = () => {
           onChange={handleFilterChange} 
           placeholder="Precio Mín." 
           style={{ padding: '8px', width: '100px' }}
+          min="0"
+          step="0.01"
         />
         
         <input 
@@ -121,41 +145,91 @@ const ProductList = () => {
           onChange={handleFilterChange} 
           placeholder="Precio Máx." 
           style={{ padding: '8px', width: '100px' }}
+          min="0"
+          step="0.01"
         />
         
-        <select name="sort" value={filters.sort} onChange={handleFilterChange} style={{ padding: '8px', flex: '1' }}>
-          <option value="-createdAt">Más Reciente</option>
-          <option value="price">Precio: Más bajo</option>
-          <option value="-price">Precio: Más alto</option>
-          <option value="name">Nombre (A-Z)</option>
-        </select>
-        
-        <button type="button" onClick={() => setFilters({ search: '', category: '', minPrice: '', maxPrice: '', seller: '', sort: '-createdAt' })} style={{ padding: '8px', cursor: 'pointer', backgroundColor: '#e74c3c', color: 'white', border: 'none' }}>
+        <button 
+          type="button" 
+          onClick={handleClearFilters} 
+          style={{ 
+            padding: '8px 15px', 
+            cursor: 'pointer', 
+            backgroundColor: '#e74c3c', 
+            color: 'white', 
+            border: 'none',
+            borderRadius: '5px' 
+          }}
+        >
           Limpiar Filtros
         </button>
-        
       </form>
       
-      {loading && <p style={{color: 'white'}}>Cargando productos...</p>}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+      {loading && <p style={{color: '#333', textAlign: 'center'}}>Cargando productos...</p>}
+      {error && <p style={{ color: 'red', textAlign: 'center' }}>Error: {error}</p>}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
         {products && products.map(product => (
           <div key={product._id} style={productStyle}>
-            {/* Chequeo de existencia de product.images para evitar errores de renderizado */}
-            {product.images && product.images.length > 0 && 
-              <img src={product.images[0].replace('https://via.placeholder.com/300', 'https://via.placeholder.com/280/0000FF/FFFFFF?text=PRODUCT+IMAGE')} alt={product.name} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '5px 5px 0 0' }} />
-            }
-            <h3>{product.name}</h3>
-            <p style={{ margin: '5px 0' }}><strong>Precio:</strong> ${product.price.toFixed(2)}</p>
-            <p style={{ margin: '5px 0' }}><strong>Categoría:</strong> {product.category}</p>
-            <p style={{ margin: '5px 0' }}><strong>Stock:</strong> {product.stock}</p>
-            {/* El backend popula la información del vendedor */}
-            <p style={{ margin: '5px 0' }}><strong>Vendedor:</strong> {product.seller ? product.seller.username : 'N/A'}</p> 
-            <button style={{ width: '100%', padding: '10px', backgroundColor: '#61dafb', border: 'none', color: '#333', cursor: 'pointer', marginTop: '10px' }}>Ver Detalles</button>
+            {/* ✅ CORREGIDO: El backend usa 'image' (singular), no 'images' */}
+            <img 
+              src={product.image || 'https://via.placeholder.com/300x200?text=Sin+Imagen'} 
+              alt={product.name} 
+              style={{ 
+                width: '100%', 
+                height: '200px', 
+                objectFit: 'cover', 
+                borderRadius: '5px',
+                marginBottom: '10px'
+              }}
+              onError={(e) => {
+                e.target.src = 'https://via.placeholder.com/300x200?text=Error+al+cargar';
+              }}
+            />
+            <h3 style={{ margin: '10px 0' }}>{product.name}</h3>
+            <p style={{ margin: '5px 0', fontSize: '0.9em', color: '#666' }}>
+              {product.description.length > 100 
+                ? `${product.description.substring(0, 100)}...` 
+                : product.description
+              }
+            </p>
+            <p style={{ margin: '5px 0' }}>
+              <strong>Precio:</strong> ${parseFloat(product.price).toFixed(2)}
+            </p>
+            <p style={{ margin: '5px 0' }}>
+              <strong>Categoría:</strong> {product.category}
+            </p>
+            <p style={{ margin: '5px 0' }}>
+              <strong>Stock:</strong> {product.stock}
+            </p>
+            {/* ✅ CORREGIDO: El backend popula 'seller' con la información del vendedor */}
+            <p style={{ margin: '5px 0' }}>
+              <strong>Vendedor:</strong> {product.seller?.username || 'N/A'}
+            </p>
+            <button 
+              style={{ 
+                width: '100%', 
+                padding: '10px', 
+                backgroundColor: '#61dafb', 
+                border: 'none', 
+                color: '#333', 
+                cursor: 'pointer', 
+                marginTop: '10px',
+                borderRadius: '5px',
+                fontWeight: 'bold'
+              }}
+              onClick={() => toast.success(`Ver detalles de: ${product.name}`)}
+            >
+              Ver Detalles
+            </button>
           </div>
         ))}
-        {products.length === 0 && !loading && !error && <p style={{color: 'white'}}>No se encontraron productos con estos criterios.</p>}
+        
+        {products.length === 0 && !loading && !error && (
+          <p style={{color: '#666', textAlign: 'center', width: '100%', padding: '40px'}}>
+            No se encontraron productos con estos criterios.
+          </p>
+        )}
       </div>
     </div>
   );
