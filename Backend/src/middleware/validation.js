@@ -1,3 +1,4 @@
+// Backend/src/middleware/validation.js
 import { body } from 'express-validator';
 
 // Register validation
@@ -70,16 +71,13 @@ export const productValidation = [
     .withMessage('Images must be an array')
 ];
 
-// Message validation
+// Message validation - ACTUALIZADO
+// Ya no validamos conversationId porque viene en la URL (req.params.id)
 export const messageValidation = [
-  body('conversationId')
-    .notEmpty()
-    .withMessage('Conversation ID is required')
-    .isInt() // <-- CAMBIO: de isMongoId() a isInt()
-    .withMessage('Invalid conversation ID'),
-  
   body('content')
     .trim()
+    .notEmpty()
+    .withMessage('Content is required')
     .isLength({ min: 1, max: 1000 })
     .withMessage('Message must be between 1 and 1000 characters')
 ];

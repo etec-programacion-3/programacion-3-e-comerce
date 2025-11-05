@@ -24,9 +24,6 @@ Product.belongsTo(User, {
 });
 
 // --- Conversaciones y Participantes (User) ---
-// Una conversación tiene muchos participantes (usuarios)
-// Un usuario puede estar en muchas conversaciones
-// Esto crea una tabla intermedia (Junction Table) llamada 'ConversationParticipants'
 User.belongsToMany(Conversation, {
   through: 'ConversationParticipants',
   foreignKey: 'userId',
@@ -39,7 +36,6 @@ Conversation.belongsToMany(User, {
 });
 
 // --- Mensajes (Sender y Conversation) ---
-// Un mensaje pertenece a un remitente (User)
 Message.belongsTo(User, {
   foreignKey: 'senderId',
   as: 'sender'
@@ -49,10 +45,9 @@ User.hasMany(Message, {
   as: 'sentMessages'
 });
 
-// Un mensaje pertenece a una conversación
 Message.belongsTo(Conversation, {
   foreignKey: 'conversationId',
-  onDelete: 'CASCADE' // Si se borra la conversación, se borran los mensajes
+  onDelete: 'CASCADE'
 });
 Conversation.hasMany(Message, {
   foreignKey: 'conversationId',
@@ -60,23 +55,21 @@ Conversation.hasMany(Message, {
 });
 
 // --- Conversación y Producto ---
-// Una conversación puede estar relacionada con un producto
 Conversation.belongsTo(Product, {
   foreignKey: 'productId',
   as: 'product',
-  onDelete: 'SET NULL', // Si el producto se borra, la conversación no
+  onDelete: 'SET NULL',
   allowNull: true
 });
-Product.hasMany(Conversation, {
-  foreignKey: 'productId'
-});
+// Product.hasMany(Conversation, { // <-- LÍNEAS ELIMINADAS (78-80)
+//   foreignKey: 'productId'
+// });
 
 // --- Conversación y Último Mensaje ---
-// Una conversación tiene un último mensaje
 Conversation.belongsTo(Message, {
   foreignKey: 'lastMessageId',
   as: 'lastMessage',
-  onDelete: 'SET NULL', // Si el mensaje se borra, no se borra la conversación
+  onDelete: 'SET NULL',
   allowNull: true
 });
 
@@ -90,7 +83,7 @@ const connectDB = async () => {
     console.log('✅ SQLite Connection has been established successfully.');
     
     // Sincronizar modelos
-    // alter: true -> Actualiza las tablas si hay cambios en los modelos (¡Útil en desarrollo!)
+    // alter: true -> Actualiza las tablas si hay cambios en los modelos
     await sequelize.sync({ force: false, alter: true });
     console.log('✅ All models were synchronized successfully.');
 

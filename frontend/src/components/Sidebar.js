@@ -1,4 +1,4 @@
-// src/components/Sidebar.js (MODIFICADO)
+// src/components/Sidebar.js (CORREGIDO)
 
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -9,13 +9,9 @@ const Sidebar = ({ isOpen, onClose, setView }) => {
     
     const { isLoggedIn, logout, user } = useAuth();
     
-    // --- CAMBIO CLAVE: Comprobar si user.avatar existe (no es null o "") ---
-    // Si 'user.avatar' es truthy (existe), úsalo.
-    // Si no (es null, "", o undefined), usa el placeholder.
     const avatar = user && user.avatar 
         ? user.avatar 
         : 'https://via.placeholder.com/60/61dafb/FFFFFF?text=P';
-    // --------------------------------------------------------------------
             
     const username = user ? user.username : 'Usuario';
     const isSeller = user && user.role === 'vendedor'; 
@@ -41,11 +37,10 @@ const Sidebar = ({ isOpen, onClose, setView }) => {
                             <div className="profile-info">
                                 
                                 <img 
-                                    src={avatar} // <-- Ahora usa el avatar o el placeholder
+                                    src={avatar} 
                                     alt="Perfil" 
                                     className="profile-photo"
                                     onError={(e) => {
-                                        // Si la URL (incluso la buena) falla, usa el placeholder
                                         e.target.src = 'https://via.placeholder.com/60/61dafb/FFFFFF?text=P';
                                     }}
                                 />
@@ -62,7 +57,6 @@ const Sidebar = ({ isOpen, onClose, setView }) => {
                     
                     <h3>Navegación</h3>
 
-                    {/* ... (El resto del sidebar sigue igual) ... */}
                     {isLoggedIn ? (
                         <>
                             {isSeller ? (
@@ -70,13 +64,20 @@ const Sidebar = ({ isOpen, onClose, setView }) => {
                                 <>
                                     <button onClick={() => navigateAndClose('create-product')} className="btn sidebar-btn btn-seller">Crear Producto</button>
                                     <button onClick={() => navigateAndClose('manage-products')} className="btn sidebar-btn btn-seller">Administrar Productos</button> 
+                                    
+                                    {/* --- LÍNEA AÑADIDA --- */}
+                                    <button onClick={() => navigateAndClose('messages')} className="btn sidebar-btn">Mensajes</button>
+                                    
                                     <button onClick={handleLogout} className="btn sidebar-btn btn-danger">Cerrar Sesión</button>
                                 </>
                             ) : (
                                 // OPCIONES DE COMPRADOR
                                 <>
                                     <button onClick={() => navigateAndClose('products')} className="btn sidebar-btn">Ver Catálogo</button>
-                                    <button onClick={() => navigateAndClose('messages')} className="btn sidebar-btn">Mensajes (WIP)</button>
+                                    
+                                    {/* --- LÍNEA MODIFICADA (se quitó WIP) --- */}
+                                    <button onClick={() => navigateAndClose('messages')} className="btn sidebar-btn">Mensajes</button>
+                                    
                                     <button onClick={handleLogout} className="btn sidebar-btn btn-danger">Cerrar Sesión</button>
                                 </>
                             )}

@@ -3,11 +3,12 @@ import { Message, Conversation, User } from '../config/db.js';
 import { Op } from 'sequelize';
 
 // @desc    Get messages for a conversation
-// @route   GET /api/messages/:conversationId
+// @route   GET /api/conversations/:id/messages
 // @access  Private
 export const getMessages = async (req, res) => {
   try {
-    const { conversationId } = req.params;
+    // CAMBIO: Usar req.params.id en lugar de req.params.conversationId
+    const conversationId = req.params.id;
     const { page = 1, limit = 50 } = req.query;
     const userId = req.user._id;
 
@@ -31,7 +32,7 @@ export const getMessages = async (req, res) => {
     );
 
     if (!isParticipant) {
-      return res.status(403).json({ // <-- CORREGIDO: 4G3 -> 403
+      return res.status(403).json({
         success: false,
         message: 'Not authorized to view this conversation'
       });
@@ -62,7 +63,7 @@ export const getMessages = async (req, res) => {
 
   } catch (error) {
     console.error('Get messages error:', error);
-    res.status(500).json({ // <-- CORREGIDO: 5D0 -> 500
+    res.status(500).json({
       success: false,
       message: 'Error fetching messages',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -71,11 +72,13 @@ export const getMessages = async (req, res) => {
 };
 
 // @desc    Send a message
-// @route   POST /api/messages
+// @route   POST /api/conversations/:id/messages
 // @access  Private
 export const sendMessage = async (req, res) => {
   try {
-    const { conversationId, content } = req.body;
+    // CAMBIO: Usar req.params.id en lugar de req.body.conversationId
+    const conversationId = req.params.id;
+    const { content } = req.body;
     const userId = req.user._id;
 
     if (!content || !content.trim()) {
@@ -115,9 +118,11 @@ export const sendMessage = async (req, res) => {
       conversationId: parseInt(conversationId)
     });
 
-    // 3. Actualizar el lastMessage de la conversación
-    // Usamos .setLastMessage() que Sequelize crea basado en la asociación
-    await conversation.setLastMessage(newMessage);
+    // 3. Actualizar el lastMessage y updatedAt de la conversación
+    await conversation.update({ 
+      lastMessageId: newMessage._id,
+      updatedAt: new Date()
+    });
 
     // 4. Obtener el mensaje completo con el remitente para devolverlo
     const fullMessage = await Message.findByPk(newMessage._id, {
@@ -145,11 +150,12 @@ export const sendMessage = async (req, res) => {
 };
 
 // @desc    Mark messages as read
-// @route   PUT /api/messages/:conversationId/read
+// @route   PUT /api/conversations/:id/messages/read
 // @access  Private
 export const markAsRead = async (req, res) => {
   try {
-    const { conversationId } = req.params;
+    // CAMBIO: Usar req.params.id en lugar de req.params.conversationId
+    const conversationId = req.params.id;
     const userId = req.user._id;
 
     // 1. Verificar conversación y participación
@@ -176,7 +182,7 @@ export const markAsRead = async (req, res) => {
     }
 
     // 2. Marcar mensajes como leídos
-    await Message.update(
+    const [updatedCount] = await Message.update(
       { isRead: true },
       {
         where: {
@@ -189,7 +195,8 @@ export const markAsRead = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Messages marked as read'
+      message: 'Messages marked as read',
+      data: { updatedCount }
     });
 
   } catch (error) {

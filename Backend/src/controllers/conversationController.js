@@ -38,7 +38,24 @@ export const getConversations = async (req, res) => {
           where: { _id: userId }, // Filtrar por el usuario actual
           attributes: [] // No necesitamos los datos del usuario aquí
         },
-        ...includeOptions // Incluir participantes, lastMessage y product
+        // ...includeOptions // <-- BUG ORIGINAL: Esto causaba doble include
+        // Definimos los includes aquí mismo para evitar el bug de doble 'as'
+        {
+          model: User,
+          as: 'participants',
+          attributes: ['_id', 'username', 'avatar', 'email'],
+          through: { attributes: [] }
+        },
+        {
+          model: Message,
+          as: 'lastMessage',
+          include: [{ model: User, as: 'sender', attributes: ['_id', 'username', 'avatar'] }]
+        },
+        {
+          model: Product,
+          as: 'product',
+          attributes: ['_id', 'name', 'price', 'image']
+        }
       ],
       order: [['updatedAt', 'DESC']]
     });
@@ -54,12 +71,15 @@ export const getConversations = async (req, res) => {
           }
         });
         
-        // Excluir al usuario actual de la lista de participantes para el frontend
-        const filteredConv = conv.toJSON();
-        filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
+        // --- LA LÍNEA DEL BUG FUE ELIMINADA ---
+        // Ya no filtramos los participantes aquí.
+        // El frontend (ConversationList.js) se encargará de esto.
+        // const filteredConv = conv.toJSON();
+        // filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId); 
+        // --- FIN DE LA LÍNEA ELIMINADA ---
 
         return {
-          ...filteredConv,
+          ...conv.toJSON(), // Devolvemos la conversación COMPLETA
           unreadCount
         };
       })
@@ -81,32 +101,37 @@ export const getConversations = async (req, res) => {
   }
 };
 
+// ... (El resto del archivo, createConversation, getConversationById, etc., sigue igual) ...
+
+
 // @desc    Get or create conversation
 // @route   POST /api/conversations
 // @access  Private
 export const createConversation = async (req, res) => {
   try {
-    const { participantId, productId } = req.body;
-    const userId = req.user._id;
+    // --- 1. CORRECCIÓN: Convertir a Enteros ---
+    const { participantId: participantIdStr, productId: productIdStr } = req.body;
+    const userId = req.user._id; // Ya es un entero
 
-    if (!participantId) {
+    if (!participantIdStr) {
       return res.status(400).json({
         success: false,
         message: 'Participant ID is required'
       });
     }
 
-    if (parseInt(participantId) === userId) {
+    const participantId = parseInt(participantIdStr);
+    const productId = productIdStr ? parseInt(productIdStr) : null;
+    // ------------------------------------------
+
+    if (participantId === userId) {
       return res.status(400).json({
         success: false,
         message: 'Cannot create conversation with yourself'
       });
     }
     
-    // 1. Buscar si ya existe una conversación entre estos dos usuarios
-    // (Esta es una consulta compleja en Sequelize para encontrar una conversación con EXACTAMENTE estos dos participantes)
-    
-    // 1a. Obtener conversaciones del usuario actual
+    // 1. Buscar si ya existe una conversación
     const userConversations = await Conversation.findAll({
       include: [{
         model: User,
@@ -116,7 +141,6 @@ export const createConversation = async (req, res) => {
       }]
     });
 
-    // 1b. De esas, encontrar la que incluya al otro participante
     let existingConversation = null;
     if (userConversations.length > 0) {
       const conv = await Conversation.findOne({
@@ -126,16 +150,18 @@ export const createConversation = async (req, res) => {
         include: [{
           model: User,
           as: 'participants',
-          where: { _id: participantId },
+          // --- 2. CORRECCIÓN: Usar la variable de entero ---
+          where: { _id: participantId }, 
           attributes: ['_id']
-        }, ...includeOptions]
+        }, 
+        // Usamos el includeOptions aquí
+        ...includeOptions]
       });
       existingConversation = conv;
     }
 
-
     if (existingConversation) {
-       // Excluir al usuario actual de la lista de participantes
+       // El frontend ya filtra, pero es bueno hacerlo aquí también
        const filteredConv = existingConversation.toJSON();
        filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
 
@@ -148,18 +174,19 @@ export const createConversation = async (req, res) => {
 
     // 2. Crear nueva conversación
     const newConversation = await Conversation.create({
-      productId: productId || null
+      // --- 3. CORRECCIÓN: Usar la variable de entero ---
+      productId: productId || null 
     });
 
     // 3. Asociar participantes
-    await newConversation.setParticipants([userId, parseInt(participantId)]);
+    await newConversation.setParticipants([userId, participantId]); // Ya son enteros
 
     // 4. Obtener la conversación completa para devolverla
     const fullConversation = await Conversation.findByPk(newConversation._id, {
       include: includeOptions
     });
 
-    // Excluir al usuario actual de la lista de participantes
+    // Filtramos la data enviada en la *creación*
     const filteredConv = fullConversation.toJSON();
     filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
 
@@ -272,10 +299,6 @@ export const deleteConversation = async (req, res) => {
       });
     }
 
-    // 1. Eliminar mensajes (Opcional, si onDelete: 'CASCADE' está en el modelo Message)
-    // await Message.destroy({ where: { conversationId: id } });
-
-    // 2. Eliminar la conversación
     await conversation.destroy();
 
     res.status(200).json({
