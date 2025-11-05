@@ -1,10 +1,12 @@
-// src/components/Register.js (CORREGIDO)
+// Frontend/src/components/Register.js (CORREGIDO)
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast'; 
+import { useAuth } from '../context/AuthContext'; // <-- IMPORTAR
 import './Forms.css';
-// Recibimos onSuccess como prop
+
+// 'onSuccess' ahora significa "registro exitoso" (irá a 'products')
 const Register = ({ onSuccess }) => {
-  // const navigate = useNavigate(); <--- YA NO ES NECESARIO
+  const { login } = useAuth(); // <-- USAR CONTEXTO
     
   const [formData, setFormData] = useState({
     username: '',
@@ -34,12 +36,18 @@ const Register = ({ onSuccess }) => {
 
       if (res.ok && data.success) {
         console.log(data);
-        toast.success('✅ ¡Usuario registrado exitosamente! Redirigiendo a Login...');
+        toast.success('✅ ¡Usuario registrado! Iniciando sesión...');
         
-        // ¡CAMBIO CLAVE! Llama al callback onSuccess para actualizar App.js
+        // --- CAMBIO CLAVE AQUÍ ---
+        // Inicia sesión automáticamente al registrarse
+        login(data.data.user, data.data.token);
+        // -------------------------
+        
         setTimeout(() => {
             if (onSuccess) {
-                onSuccess(); // Esto llama a setView('login')
+                // ¡CAMBIO CLAVE! Llama al callback onSuccess para actualizar App.js
+                // (onSuccess en App.js para Register debe llevar a 'products')
+                onSuccess(); 
             }
         }, 1500); 
         

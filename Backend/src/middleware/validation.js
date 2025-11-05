@@ -75,7 +75,7 @@ export const messageValidation = [
   body('conversationId')
     .notEmpty()
     .withMessage('Conversation ID is required')
-    .isMongoId()
+    .isInt() // <-- CAMBIO: de isMongoId() a isInt()
     .withMessage('Invalid conversation ID'),
   
   body('content')

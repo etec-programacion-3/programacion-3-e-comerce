@@ -1,35 +1,34 @@
-import mongoose from 'mongoose';
+// Backend/src/models/conversationModel.js
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/sequelizeInstance.js';
 
-const conversationSchema = new mongoose.Schema({
-  participants: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  }],
-  lastMessage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message'
+const Conversation = sequelize.define('Conversation', {
+  _id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
-  product: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product'
-  }
+  // La asociación 'productId' se definirá en db.js
+  // La asociación 'lastMessageId' se definirá en db.js
 }, {
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['productId']
+    },
+    {
+      fields: ['lastMessageId']
+    }
+  ]
 });
 
-// Ensure only 2 participants per conversation
-conversationSchema.pre('save', function(next) {
-  if (this.participants.length !== 2) {
-    next(new Error('A conversation must have exactly 2 participants'));
-  } else {
-    next();
-  }
-});
+// Método de instancia para formatear la respuesta
+Conversation.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values._id || values.id;
+  delete values.id;
+  return values;
+};
 
-// Create compound index to prevent duplicate conversations
-conversationSchema.index({ participants: 1 });
-
-const Conversation = mongoose.model('Conversation', conversationSchema);
-
+// LÍNEA QUE FALTABA:
 export default Conversation;

@@ -28,8 +28,11 @@ createUploadDirectories();
 // Configuración de almacenamiento
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Determinar carpeta según el tipo de archivo
-    const uploadType = req.baseUrl.includes('users') ? 'users' : 'products';
+    // ==== CAMBIO AQUÍ ====
+    // Leer el tipo desde req.query, igual que en el controlador
+    const uploadType = req.query.type === 'users' ? 'users' : 'products';
+    // ======================
+    
     const uploadPath = path.join(__dirname, `../../uploads/${uploadType}`);
     cb(null, uploadPath);
   },

@@ -1,16 +1,17 @@
-// Backend/src/index.js (ACTUALIZADO)
+// Backend/src/index.js (CORREGIDO)
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import multer from 'multer'; // ✅ AÑADIDO
 import { connectDB } from './config/db.js';
 
 // Importar rutas
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import productRoutes from './routes/productRoutes.js';
-import uploadRoutes from './routes/UploadRoutes.js'; // ← NUEVO
+import uploadRoutes from './routes/uploadRoutes.js'; // ✅ CORREGIDO (minúscula)
 import conversationRoutes from './routes/conversationRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
 
@@ -41,7 +42,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ NUEVO: Servir archivos estáticos (imágenes subidas)
+// Servir archivos estáticos (imágenes subidas)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ========================================
@@ -58,7 +59,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth',
       users: '/api/users',
       products: '/api/products',
-      upload: '/api/upload', // ← NUEVO
+      upload: '/api/upload',
       conversations: '/api/conversations',
       messages: '/api/messages'
     }
@@ -69,7 +70,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/upload', uploadRoutes); // ← NUEVO
+app.use('/api/upload', uploadRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 
@@ -84,7 +85,6 @@ app.use('*', (req, res) => {
 // ========================================
 // MIDDLEWARE DE MANEJO DE ERRORES
 // ========================================
-app.use(errorHandler);
 
 // Middleware para manejar errores de Multer
 app.use((err, req, res, next) => {
@@ -102,6 +102,9 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
+
+// Error handler global
+app.use(errorHandler);
 
 // ========================================
 // INICIAR SERVIDOR

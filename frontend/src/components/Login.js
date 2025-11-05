@@ -1,11 +1,11 @@
+// Frontend/src/components/Login.js (MODIFICADO)
 import React, { useState } from 'react';
 import { toast } from 'react-hot-toast'; 
-import { useAuth } from '../context/AuthContext'; // <--- IMPORTACIÓN AÑADIDA
+import { useAuth } from '../context/AuthContext';
 import './Forms.css';
-// Recibimos onSuccess como prop
+
 const Login = ({ onSuccess }) => { 
-  const { login } = useAuth();
-  // const navigate = useNavigate(); <--- YA NO ES NECESARIO
+  const { login } = useAuth(); // <--- Usa el contexto
   
   const [formData, setFormData] = useState({
     email: '',
@@ -32,14 +32,17 @@ const Login = ({ onSuccess }) => {
 
       if (res.ok && data.success && data.data.token) {
         
-        login(data.data.token); // <--- CAMBIO CLAVE: Usa la función del contexto para iniciar sesión
-        console.log('Token guardado y Contexto actualizado.');
+        // --- CAMBIO CLAVE AQUÍ ---
+        // Se pasan los DATOS DEL USUARIO y el TOKEN al contexto
+        login(data.data.user, data.data.token); 
+        // -------------------------
+        
+        console.log('Token y Usuario guardados. Contexto actualizado.');
         toast.success('¡Login exitoso! Actualizando vista...'); 
         
-        // Ejecuta el cambio de vista en App.js
         setTimeout(() => {
             if (onSuccess) {
-                onSuccess(); 
+                onSuccess(); // Esto (en App.js) cambia la vista a 'products'
             }
         }, 1500);
       } else {

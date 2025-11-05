@@ -1,9 +1,10 @@
 // Backend/src/config/db.js
 import sequelize from './sequelizeInstance.js';
 
-// Importamos los modelos AQUÍ para que Sequelize los registre y sincronice
-import User from '../models/userModel.js'; 
+// Importamos TODOS los modelos de Sequelize
+import User from '../models/userModel.js';
 import Product from '../models/productModel.js';
+// Importamos los nuevos modelos migrados
 import Conversation from '../models/conversationModel.js';
 import Message from '../models/messageModel.js';
 
@@ -11,36 +12,86 @@ import Message from '../models/messageModel.js';
 // DEFINIR ASOCIACIONES ENTRE MODELOS
 // ========================================
 
-// Un Usuario (vendedor) puede tener muchos Productos
+// --- Producto y Vendedor (User) ---
 User.hasMany(Product, {
   foreignKey: 'sellerId',
   as: 'products',
   onDelete: 'CASCADE'
 });
-
-// Un Producto pertenece a un Usuario (vendedor)
 Product.belongsTo(User, {
   foreignKey: 'sellerId',
   as: 'seller'
 });
 
-// TODO: Definir asociaciones para Conversation y Message cuando sean necesarias
-// Ejemplo:
-// User.belongsToMany(Conversation, { through: 'ConversationParticipants', foreignKey: 'userId' });
-// Conversation.belongsToMany(User, { through: 'ConversationParticipants', foreignKey: 'conversationId' });
-// Message.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
-// Message.belongsTo(Conversation, { foreignKey: 'conversationId' });
+// --- Conversaciones y Participantes (User) ---
+// Una conversación tiene muchos participantes (usuarios)
+// Un usuario puede estar en muchas conversaciones
+// Esto crea una tabla intermedia (Junction Table) llamada 'ConversationParticipants'
+User.belongsToMany(Conversation, {
+  through: 'ConversationParticipants',
+  foreignKey: 'userId',
+  as: 'conversations'
+});
+Conversation.belongsToMany(User, {
+  through: 'ConversationParticipants',
+  foreignKey: 'conversationId',
+  as: 'participants'
+});
+
+// --- Mensajes (Sender y Conversation) ---
+// Un mensaje pertenece a un remitente (User)
+Message.belongsTo(User, {
+  foreignKey: 'senderId',
+  as: 'sender'
+});
+User.hasMany(Message, {
+  foreignKey: 'senderId',
+  as: 'sentMessages'
+});
+
+// Un mensaje pertenece a una conversación
+Message.belongsTo(Conversation, {
+  foreignKey: 'conversationId',
+  onDelete: 'CASCADE' // Si se borra la conversación, se borran los mensajes
+});
+Conversation.hasMany(Message, {
+  foreignKey: 'conversationId',
+  as: 'messages'
+});
+
+// --- Conversación y Producto ---
+// Una conversación puede estar relacionada con un producto
+Conversation.belongsTo(Product, {
+  foreignKey: 'productId',
+  as: 'product',
+  onDelete: 'SET NULL', // Si el producto se borra, la conversación no
+  allowNull: true
+});
+Product.hasMany(Conversation, {
+  foreignKey: 'productId'
+});
+
+// --- Conversación y Último Mensaje ---
+// Una conversación tiene un último mensaje
+Conversation.belongsTo(Message, {
+  foreignKey: 'lastMessageId',
+  as: 'lastMessage',
+  onDelete: 'SET NULL', // Si el mensaje se borra, no se borra la conversación
+  allowNull: true
+});
+
+// ========================================
+// FUNCIÓN DE CONEXIÓN
+// ========================================
 
 const connectDB = async () => {
   try {
-    // Autenticar la conexión (esto crea el archivo .sqlite si no existe)
     await sequelize.authenticate();
     console.log('✅ SQLite Connection has been established successfully.');
     
-    // Sincronizar modelos: Crea las tablas si no existen
-    // { force: false } previene la eliminación de tablas existentes
-    // { alter: true } actualiza las tablas si la estructura cambió
-    await sequelize.sync({ force: false, alter: false }); 
+    // Sincronizar modelos
+    // alter: true -> Actualiza las tablas si hay cambios en los modelos (¡Útil en desarrollo!)
+    await sequelize.sync({ force: false, alter: true });
     console.log('✅ All models were synchronized successfully.');
 
   } catch (error) {

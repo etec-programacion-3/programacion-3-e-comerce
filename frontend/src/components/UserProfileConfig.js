@@ -1,7 +1,7 @@
-// Frontend/src/components/UserProfileConfig.js (CON SUBIDA DE FOTO)
+// Frontend/src/components/UserProfileConfig.js (MODIFICADO)
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../context/AuthContext'; // <-- Importación estándar
 import ImageUploader from './ImageUploader';
 import './Forms.css'; 
 import './UserProfileConfig.css'; 
@@ -15,12 +15,13 @@ const decodeToken = (token) => {
 };
 
 const UserProfileConfig = () => {
-  const { isLoggedIn } = useAuth();
+  // --- CAMBIO 1: Obtener la nueva función del contexto ---
+  const { isLoggedIn, updateUserContext } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     role: '',
-    avatar: '', // ✅ Cambiado de profileImageUrl a avatar para consistencia con backend
+    avatar: '', 
     newPassword: '',
     confirmNewPassword: ''
   });
@@ -28,6 +29,7 @@ const UserProfileConfig = () => {
   const [loading, setLoading] = useState(true);
   const PORT = 4000;
 
+  // ... (El useEffect sigue igual)
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -35,16 +37,13 @@ const UserProfileConfig = () => {
       setLoading(false);
       return;
     }
-
     const userPayload = decodeToken(token);
     if (!userPayload || !userPayload.id) {
       toast.error('Token inválido. No se puede obtener el ID de usuario.');
       setLoading(false);
       return;
     }
-    
     setUserId(userPayload.id);
-
     const fetchUserData = async (id, token) => {
       try {
         const res = await fetch(`http://localhost:${PORT}/api/users/${id}`, {
@@ -53,13 +52,12 @@ const UserProfileConfig = () => {
           }
         });
         const data = await res.json();
-
         if (res.ok && data.success) {
           setFormData({
             username: data.data.username || '',
             email: data.data.email || '',
             role: data.data.role || 'comprador',
-            avatar: data.data.avatar || '', // ✅ Cargar avatar existente
+            avatar: data.data.avatar || '', 
             newPassword: '',
             confirmNewPassword: ''
           });
@@ -73,15 +71,14 @@ const UserProfileConfig = () => {
         setLoading(false);
       }
     };
-
     fetchUserData(userPayload.id, token);
   }, [isLoggedIn]);
+
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ NUEVO: Callback cuando se sube una imagen
   const handleAvatarUploaded = (imageUrl) => {
     setFormData({ ...formData, avatar: imageUrl });
   };
@@ -94,12 +91,11 @@ const UserProfileConfig = () => {
       toast.error('Las nuevas contraseñas no coinciden.');
       return;
     }
-
-    const updateData = {
+    
+    const dataToSend = {
       username: formData.username,
       email: formData.email,
-      avatar: formData.avatar, // ✅ Enviar avatar actualizado
-      role: formData.role,
+      avatar: formData.avatar,
       ...(formData.newPassword && { password: formData.newPassword })
     };
 
@@ -110,13 +106,18 @@ const UserProfileConfig = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify(dataToSend), 
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
         toast.success('Perfil actualizado exitosamente.');
+        
+        // --- CAMBIO 2: Actualizar el contexto ---
+        // Esto actualiza el avatar en el Sidebar INMEDIATAMENTE
+        updateUserContext(data.data);
+        
         setFormData(prev => ({
           ...prev,
           newPassword: '',
@@ -134,6 +135,7 @@ const UserProfileConfig = () => {
     }
   };
 
+  // ... (El resto del return sigue igual)
   if (loading) return <div className="profile-config-container"><p>Cargando perfil...</p></div>;
   if (!userId) return <div className="profile-config-container"><p>Acceso denegado o usuario no encontrado.</p></div>;
 
@@ -144,7 +146,6 @@ const UserProfileConfig = () => {
         
         <div className="form-section-title">Foto de Perfil</div>
         
-        {/* ✅ NUEVO: Componente de subida de avatar */}
         <ImageUploader
           currentImage={formData.avatar}
           onImageUploaded={handleAvatarUploaded}
@@ -160,7 +161,6 @@ const UserProfileConfig = () => {
           value={formData.username} 
           onChange={onChange} 
           placeholder="Nombre de usuario" 
-          required 
         />
         <input 
           type="email" 
@@ -168,7 +168,6 @@ const UserProfileConfig = () => {
           value={formData.email} 
           onChange={onChange} 
           placeholder="Email" 
-          required 
         />
         <select name="role" value={formData.role} onChange={onChange} disabled={true}>
           <option value="comprador">Comprador</option>

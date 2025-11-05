@@ -7,25 +7,13 @@ export const notFound = (req, res, next) => {
 
 // Global error handler
 export const errorHandler = (err, req, res, next) => {
-  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-  
-  res.status(statusCode).json({
+  // log with winston/pino
+  const status = err.status || 500;
+  res.status(status).json({
     success: false,
-    message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    // MongoDB duplicate key error
-    ...(err.code === 11000 && {
-      message: 'Duplicate field value entered',
-      field: Object.keys(err.keyValue)[0]
-    }),
-    // MongoDB validation error
-    ...(err.name === 'ValidationError' && {
-      message: 'Validation Error',
-      errors: Object.values(err.errors).map(e => e.message)
-    }),
-    // MongoDB cast error (invalid ID)
-    ...(err.name === 'CastError' && {
-      message: `Invalid ${err.path}: ${err.value}`
-    })
+    error: {
+      message: err.message || 'Internal Server Error',
+      ...(process.env.NODE_ENV === 'development' ? { stack: err.stack } : {})
+    }
   });
 };

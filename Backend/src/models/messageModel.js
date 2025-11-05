@@ -1,33 +1,52 @@
-import mongoose from 'mongoose';
+// Backend/src/models/messageModel.js
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/sequelizeInstance.js';
 
-const messageSchema = new mongoose.Schema({
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const Message = sequelize.define('Message', {
+  _id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
   content: {
-    type: String,
-    required: [true, 'Message content is required'],
-    trim: true,
-    maxlength: [1000, 'Message cannot exceed 1000 characters']
-  },
-  conversation: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Conversation',
-    required: true
+    type: DataTypes.TEXT,
+    allowNull: false,
+    validate: {
+      notEmpty: {
+        msg: 'El contenido del mensaje no puede estar vacío'
+      },
+      len: {
+        args: [1, 1000],
+        msg: 'El mensaje debe tener entre 1 y 1000 caracteres'
+      }
+    }
   },
   isRead: {
-    type: Boolean,
-    default: false
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
+  // Las asociaciones 'senderId' y 'conversationId' se definirán en db.js
 }, {
-  timestamps: true
+  timestamps: true,
+  indexes: [
+    {
+      fields: ['conversationId']
+    },
+    {
+      fields: ['senderId']
+    },
+    {
+      fields: ['createdAt']
+    }
+  ]
 });
 
-// Index for faster queries
-messageSchema.index({ conversation: 1, createdAt: -1 });
-
-const Message = mongoose.model('Message', messageSchema);
+// Método de instancia para formatear la respuesta
+Message.prototype.toJSON = function () {
+  const values = { ...this.get() };
+  values._id = values._id || values.id;
+  delete values.id;
+  return values;
+};
 
 export default Message;

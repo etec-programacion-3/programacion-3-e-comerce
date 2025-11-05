@@ -1,30 +1,65 @@
-import Conversation from '../models/conversationModel.js';
-import Message from '../models/messageModel.js';
+// Backend/src/controllers/conversationController.js
+import { Conversation, Message, User, Product } from '../config/db.js';
+import { Op } from 'sequelize';
+
+// Opciones de Inclusión (Populate) para Sequelize
+const includeOptions = [
+  {
+    model: User,
+    as: 'participants',
+    attributes: ['_id', 'username', 'avatar', 'email'],
+    through: { attributes: [] } // No incluir la tabla intermedia
+  },
+  {
+    model: Message,
+    as: 'lastMessage',
+    include: [{ model: User, as: 'sender', attributes: ['_id', 'username', 'avatar'] }]
+  },
+  {
+    model: Product,
+    as: 'product',
+    attributes: ['_id', 'name', 'price', 'image']
+  }
+];
 
 // @desc    Get user's conversations
 // @route   GET /api/conversations
 // @access  Private
 export const getConversations = async (req, res) => {
   try {
-    const conversations = await Conversation.find({
-      participants: req.user.id
-    })
-    .populate('participants', 'username avatar email')
-    .populate('lastMessage')
-    .populate('product', 'name price images')
-    .sort('-updatedAt');
+    const userId = req.user._id;
 
-    // Get unread count for each conversation
+    // 1. Encontrar todas las conversaciones donde el usuario es participante
+    const conversations = await Conversation.findAll({
+      include: [
+        {
+          model: User,
+          as: 'participants',
+          where: { _id: userId }, // Filtrar por el usuario actual
+          attributes: [] // No necesitamos los datos del usuario aquí
+        },
+        ...includeOptions // Incluir participantes, lastMessage y product
+      ],
+      order: [['updatedAt', 'DESC']]
+    });
+
+    // 2. Obtener el conteo de no leídos (similar a la lógica original)
     const conversationsWithUnread = await Promise.all(
       conversations.map(async (conv) => {
-        const unreadCount = await Message.countDocuments({
-          conversation: conv._id,
-          sender: { $ne: req.user.id },
-          isRead: false
+        const unreadCount = await Message.count({
+          where: {
+            conversationId: conv._id,
+            senderId: { [Op.ne]: userId },
+            isRead: false
+          }
         });
+        
+        // Excluir al usuario actual de la lista de participantes para el frontend
+        const filteredConv = conv.toJSON();
+        filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
 
         return {
-          ...conv.toObject(),
+          ...filteredConv,
           unreadCount
         };
       })
@@ -38,7 +73,7 @@ export const getConversations = async (req, res) => {
 
   } catch (error) {
     console.error('Get conversations error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Error fetching conversations',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -52,60 +87,91 @@ export const getConversations = async (req, res) => {
 export const createConversation = async (req, res) => {
   try {
     const { participantId, productId } = req.body;
+    const userId = req.user._id;
 
     if (!participantId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Participant ID is required' 
+        message: 'Participant ID is required'
       });
     }
 
-    // Don't allow conversation with self
-    if (participantId === req.user.id) {
-      return res.status(400).json({ 
+    if (parseInt(participantId) === userId) {
+      return res.status(400).json({
         success: false,
-        message: 'Cannot create conversation with yourself' 
+        message: 'Cannot create conversation with yourself'
       });
     }
+    
+    // 1. Buscar si ya existe una conversación entre estos dos usuarios
+    // (Esta es una consulta compleja en Sequelize para encontrar una conversación con EXACTAMENTE estos dos participantes)
+    
+    // 1a. Obtener conversaciones del usuario actual
+    const userConversations = await Conversation.findAll({
+      include: [{
+        model: User,
+        as: 'participants',
+        where: { _id: userId },
+        attributes: ['_id']
+      }]
+    });
 
-    // Check if conversation already exists between these two users
-    const existingConversation = await Conversation.findOne({
-      participants: { $all: [req.user.id, participantId] }
-    })
-    .populate('participants', 'username avatar email')
-    .populate('lastMessage')
-    .populate('product', 'name price images');
+    // 1b. De esas, encontrar la que incluya al otro participante
+    let existingConversation = null;
+    if (userConversations.length > 0) {
+      const conv = await Conversation.findOne({
+        where: {
+          _id: { [Op.in]: userConversations.map(c => c._id) }
+        },
+        include: [{
+          model: User,
+          as: 'participants',
+          where: { _id: participantId },
+          attributes: ['_id']
+        }, ...includeOptions]
+      });
+      existingConversation = conv;
+    }
+
 
     if (existingConversation) {
+       // Excluir al usuario actual de la lista de participantes
+       const filteredConv = existingConversation.toJSON();
+       filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
+
       return res.status(200).json({
         success: true,
         message: 'Conversation already exists',
-        data: existingConversation
+        data: filteredConv
       });
     }
 
-    // Create new conversation
-    const newConversation = new Conversation({
-      participants: [req.user.id, participantId],
-      product: productId || null
+    // 2. Crear nueva conversación
+    const newConversation = await Conversation.create({
+      productId: productId || null
     });
 
-    await newConversation.save();
-    
-    await newConversation.populate('participants', 'username avatar email');
-    if (productId) {
-      await newConversation.populate('product', 'name price images');
-    }
+    // 3. Asociar participantes
+    await newConversation.setParticipants([userId, parseInt(participantId)]);
+
+    // 4. Obtener la conversación completa para devolverla
+    const fullConversation = await Conversation.findByPk(newConversation._id, {
+      include: includeOptions
+    });
+
+    // Excluir al usuario actual de la lista de participantes
+    const filteredConv = fullConversation.toJSON();
+    filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
 
     res.status(201).json({
       success: true,
       message: 'Conversation created successfully',
-      data: newConversation
+      data: filteredConv
     });
 
   } catch (error) {
     console.error('Create conversation error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Error creating conversation',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -118,48 +184,56 @@ export const createConversation = async (req, res) => {
 // @access  Private
 export const getConversationById = async (req, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id)
-      .populate('participants', 'username avatar email')
-      .populate('lastMessage')
-      .populate('product', 'name price images');
+    const userId = req.user._id;
+    const { id } = req.params;
+
+    const conversation = await Conversation.findByPk(id, {
+      include: includeOptions
+    });
 
     if (!conversation) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Conversation not found' 
+        message: 'Conversation not found'
       });
     }
 
-    // Verify user is participant
+    // Verificar que el usuario sea participante
     const isParticipant = conversation.participants.some(
-      p => p._id.toString() === req.user.id
+      p => p._id === userId
     );
 
     if (!isParticipant) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: 'Not authorized to view this conversation' 
+        message: 'Not authorized to view this conversation'
       });
     }
 
-    // Get unread count
-    const unreadCount = await Message.countDocuments({
-      conversation: conversation._id,
-      sender: { $ne: req.user.id },
-      isRead: false
+    // Contar no leídos
+    const unreadCount = await Message.count({
+      where: {
+        conversationId: conversation._id,
+        senderId: { [Op.ne]: userId },
+        isRead: false
+      }
     });
+    
+    // Excluir al usuario actual de la lista de participantes
+    const filteredConv = conversation.toJSON();
+    filteredConv.participants = filteredConv.participants.filter(p => p._id !== userId);
 
     res.status(200).json({
       success: true,
       data: {
-        ...conversation.toObject(),
+        ...filteredConv,
         unreadCount
       }
     });
 
   } catch (error) {
     console.error('Get conversation error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Error fetching conversation',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -172,41 +246,47 @@ export const getConversationById = async (req, res) => {
 // @access  Private
 export const deleteConversation = async (req, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    const { id } = req.params;
+    const userId = req.user._id;
+
+    const conversation = await Conversation.findByPk(id, {
+      include: [{ model: User, as: 'participants', attributes: ['_id'] }]
+    });
 
     if (!conversation) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Conversation not found' 
+        message: 'Conversation not found'
       });
     }
 
-    // Verify user is participant
+    // Verificar que el usuario sea participante
     const isParticipant = conversation.participants.some(
-      p => p.toString() === req.user.id
+      p => p._id === userId
     );
 
     if (!isParticipant) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: 'Not authorized to delete this conversation' 
+        message: 'Not authorized to delete this conversation'
       });
     }
 
-    // Delete all messages in conversation
-    await Message.deleteMany({ conversation: req.params.id });
+    // 1. Eliminar mensajes (Opcional, si onDelete: 'CASCADE' está en el modelo Message)
+    // await Message.destroy({ where: { conversationId: id } });
 
-    // Delete conversation
-    await conversation.deleteOne();
+    // 2. Eliminar la conversación
+    await conversation.destroy();
 
     res.status(200).json({
       success: true,
       message: 'Conversation deleted successfully'
     });
 
-  } catch (error) {
+  } catch (error)
+ {
     console.error('Delete conversation error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Error deleting conversation',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined

@@ -1,4 +1,4 @@
-// Backend/src/middleware/productValidation.js
+// Backend/src/middleware/productValidation.js (CORREGIDO)
 import { body } from 'express-validator';
 
 // Validación para crear producto
@@ -35,10 +35,11 @@ export const validateCreateProduct = [
     .isInt({ min: 0 })
     .withMessage('El stock debe ser un número entero mayor o igual a 0'),
 
+  // --- CAMBIO AQUÍ ---
   body('image')
     .optional()
-    .isURL()
-    .withMessage('La imagen debe ser una URL válida')
+    .isString() // CAMBIADO DE .isURL() a .isString()
+    .withMessage('La imagen debe ser un enlace de texto')
 ];
 
 // Validación para actualizar producto
@@ -71,8 +72,9 @@ export const validateUpdateProduct = [
     .isInt({ min: 0 })
     .withMessage('El stock debe ser un número entero mayor o igual a 0'),
 
+  // --- CAMBIO AQUÍ ---
   body('image')
     .optional()
-    .isURL()
-    .withMessage('La imagen debe ser una URL válida')
+    .isString() // CAMBIADO DE .isURL() a .isString()
+    .withMessage('La imagen debe ser un enlace de texto')
 ];

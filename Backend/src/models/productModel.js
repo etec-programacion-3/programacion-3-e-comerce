@@ -1,4 +1,4 @@
-// Backend/src/models/productModel.js
+// Backend/src/models/productModel.js (CORREGIDO)
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/sequelizeInstance.js';
 
@@ -74,16 +74,14 @@ const Product = sequelize.define('Product', {
       }
     }
   },
+  // --- CAMBIO AQUÍ ---
   image: {
     type: DataTypes.STRING,
     allowNull: true,
-    defaultValue: 'https://via.placeholder.com/400x300?text=Producto',
-    validate: {
-      isUrl: {
-        msg: 'La imagen debe ser una URL válida'
-      }
-    }
+    defaultValue: 'https://via.placeholder.com/400x300?text=Producto'
+    // Se eliminó el bloque 'validate: { isUrl: ... }'
   },
+  // ---------------------
   sellerId: {
     type: DataTypes.INTEGER,
     allowNull: false,

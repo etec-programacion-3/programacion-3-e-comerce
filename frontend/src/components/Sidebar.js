@@ -1,60 +1,55 @@
-// src/components/Sidebar.js
+// src/components/Sidebar.js (MODIFICADO)
 
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { toast } from 'react-hot-toast';
-import './Sidebar.css'; // Importa el nuevo archivo CSS
+// import { toast } from 'react-hot-toast'; // (Eliminamos esto antes para el warning)
+import './Sidebar.css'; 
 
-// Función auxiliar para decodificar el token (si no se usa AuthContext para el rol)
-const decodeToken = (token) => {
-    try {
-        return JSON.parse(atob(token.split('.')[1]));
-    } catch (e) {
-        return null;
-    }
-};
-
-// Componente que renderiza el perfil y las opciones de navegación
 const Sidebar = ({ isOpen, onClose, setView }) => {
-    const { isLoggedIn, logout } = useAuth();
     
-    // --- LÓGICA DE PERFIL Y ROL ---
-    const token = localStorage.getItem('token');
-    const user = token ? decodeToken(token) : null;
+    const { isLoggedIn, logout, user } = useAuth();
+    
+    // --- CAMBIO CLAVE: Comprobar si user.avatar existe (no es null o "") ---
+    // Si 'user.avatar' es truthy (existe), úsalo.
+    // Si no (es null, "", o undefined), usa el placeholder.
+    const avatar = user && user.avatar 
+        ? user.avatar 
+        : 'https://via.placeholder.com/60/61dafb/FFFFFF?text=P';
+    // --------------------------------------------------------------------
+            
     const username = user ? user.username : 'Usuario';
-    const fullName = username;
-    
-    // Asumo que el rol 'vendedor' está en el token:
     const isSeller = user && user.role === 'vendedor'; 
 
-    // --- FUNCIONES DE NAVEGACIÓN ---
     const handleLogout = () => {
         logout();
-        setView('products'); // Retorna a la vista de productos
-        onClose(); // Cierra el sidebar
+        setView('products'); 
+        onClose(); 
     };
 
     const navigateAndClose = (targetView) => {
         setView(targetView);
-        onClose(); // Cierra el sidebar
+        onClose(); 
     };
 
     return (
         <>
-            {/* El sidebar en sí */}
             <div className={`sidebar ${isOpen ? 'open' : ''}`}>
                 <div className="sidebar-content">
                     
-                    {/* ----------------- SECCIÓN DE PERFIL ----------------- */}
-                    {isLoggedIn && (
+                    {isLoggedIn && user && ( 
                         <div className="sidebar-profile">
                             <div className="profile-info">
+                                
                                 <img 
-                                    src="https://via.placeholder.com/60/61dafb/FFFFFF?text=P"
+                                    src={avatar} // <-- Ahora usa el avatar o el placeholder
                                     alt="Perfil" 
                                     className="profile-photo"
+                                    onError={(e) => {
+                                        // Si la URL (incluso la buena) falla, usa el placeholder
+                                        e.target.src = 'https://via.placeholder.com/60/61dafb/FFFFFF?text=P';
+                                    }}
                                 />
-                                <span className="profile-name">{fullName}</span>
+                                <span className="profile-name">{username}</span>
                             </div>
                             <button 
                                 onClick={() => navigateAndClose('configure-user')} 
@@ -67,7 +62,7 @@ const Sidebar = ({ isOpen, onClose, setView }) => {
                     
                     <h3>Navegación</h3>
 
-                    {/* Bloque de Opciones de Menú */}
+                    {/* ... (El resto del sidebar sigue igual) ... */}
                     {isLoggedIn ? (
                         <>
                             {isSeller ? (
@@ -95,7 +90,6 @@ const Sidebar = ({ isOpen, onClose, setView }) => {
                     )}
                 </div>
             </div>
-            {/* OVERLAY para cerrar el sidebar al hacer clic fuera */}
             {isOpen && <div className="sidebar-overlay" onClick={onClose}></div>}
         </>
     );

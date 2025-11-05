@@ -1,4 +1,4 @@
-// src/context/AuthContext.js
+// src/context/AuthContext.js (MODIFICADO)
 
 import React, { createContext, useState, useContext } from 'react';
 import { toast } from 'react-hot-toast';
@@ -13,30 +13,45 @@ export const useAuth = () => {
 
 // 3. Proveedor del Contexto
 export const AuthProvider = ({ children }) => {
-    // Inicializa el estado 'isLoggedIn' verificando si existe el token en localStorage
-    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
-    // Opcionalmente, puedes añadir 'userRole' o 'userData' aquí
+    const [user, setUser] = useState(() => {
+        const storedUser = localStorage.getItem('user');
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
 
-    // Función de LOGIN: Guarda el token y actualiza el estado
-    const login = (token) => {
+    const isLoggedIn = !!user;
+
+    const login = (userData, token) => {
         localStorage.setItem('token', token);
-        setIsLoggedIn(true);
-        // NO HACEMOS setView AQUÍ. La vista se actualiza en App.js
+        localStorage.setItem('user', JSON.stringify(userData)); 
+        setUser(userData); 
     };
 
-    // Función de LOGOUT: Elimina el token y actualiza el estado
     const logout = () => {
         localStorage.removeItem('token');
-        setIsLoggedIn(false);
+        localStorage.removeItem('user'); 
+        setUser(null); 
         toast.success('Sesión cerrada correctamente.'); 
-        // NO HACEMOS setView AQUÍ. La vista se actualiza en App.js
     };
 
-    // Objeto de valor que se compartirá con toda la aplicación
+    // --- ¡NUEVA FUNCIÓN! ---
+    // La usamos para actualizar el 'user' en el contexto y localStorage
+    // después de editar el perfil.
+    const updateUserContext = (newUserData) => {
+        setUser(currentUser => {
+            // Combina los datos antiguos con los nuevos
+            const updatedUser = { ...currentUser, ...newUserData };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            return updatedUser;
+        });
+    };
+    // -----------------------
+
     const value = {
         isLoggedIn,
+        user,
         login,
         logout,
+        updateUserContext // <-- Exponemos la nueva función
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
