@@ -1,4 +1,4 @@
-// src/components/ChatWindow.js
+// src/components/ChatWindow.js (MODIFICADO)
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -12,6 +12,9 @@ const ChatWindow = ({ conversationId }) => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const PORT = 4000;
+  
+  // Usamos una referencia para evitar que el loading del polling sea intrusivo
+  const initialLoadRef = useRef(true); 
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -21,41 +24,77 @@ const ChatWindow = ({ conversationId }) => {
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
     
-    setLoading(true);
+    // Solo mostrar "Cargando..." en la carga inicial
+    if (initialLoadRef.current) {
+      setLoading(true);
+    }
+    
     const token = localStorage.getItem('token');
     
     try {
-      // 1. Obtener los detalles de la conversación (para saber con quién hablamos)
-      const convRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const convData = await convRes.json();
-      if (convRes.ok) {
-        setConversation(convData.data);
-      } else {
-        throw new Error(convData.message || 'Error al cargar conversación');
+      // 1. Obtener los detalles de la conversación (solo en la carga inicial)
+      if (initialLoadRef.current) {
+        const convRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const convData = await convRes.json();
+        if (convRes.ok) {
+          setConversation(convData.data);
+        } else {
+          throw new Error(convData.message || 'Error al cargar conversación');
+        }
       }
 
-      // 2. Obtener los mensajes
+      // 2. Obtener los mensajes (esto se hace en cada polling)
       const msgRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}/messages`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const msgData = await msgRes.json();
       if (msgRes.ok) {
-        setMessages(msgData.data);
+        // Comparamos si los mensajes son diferentes antes de actualizar
+        // para evitar re-renders innecesarios
+        setMessages(prevMessages => {
+          if (JSON.stringify(prevMessages) !== JSON.stringify(msgData.data)) {
+            return msgData.data;
+          }
+          return prevMessages;
+        });
       } else {
         throw new Error(msgData.message || 'Error al cargar mensajes');
       }
     } catch (error) {
       toast.error(error.message);
     } finally {
-      setLoading(false);
+      if (initialLoadRef.current) {
+        setLoading(false);
+        initialLoadRef.current = false; // Marcar que la carga inicial terminó
+      }
     }
-  }, [conversationId]);
+  }, [conversationId]); // Depende solo de conversationId
 
+  // --- MODIFICACIÓN CLAVE: useEffect con setInterval ---
   useEffect(() => {
-    fetchMessages();
-  }, [fetchMessages]);
+    if (!conversationId) return;
+
+    // Reseteamos la carga inicial al cambiar de chat
+    initialLoadRef.current = true;
+    
+    // 1. Cargar mensajes inmediatamente al seleccionar
+    fetchMessages(); 
+
+    // 2. Establecer el polling (ej. cada 5 segundos)
+    const intervalId = setInterval(() => {
+      fetchMessages();
+    }, 5000); // 5000ms = 5 segundos
+
+    // 3. Limpiar el intervalo cuando el componente se desmonte
+    // o cuando el 'conversationId' cambie
+    return () => {
+      clearInterval(intervalId);
+    };
+    
+  }, [conversationId, fetchMessages]); // El 'fetchMessages' está en la dependencia
+  // ---------------------------------------------------
 
   useEffect(() => {
     scrollToBottom();
