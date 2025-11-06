@@ -1,12 +1,13 @@
-// Frontend/src/components/Login.js (MODIFICADO)
 import React, { useState } from 'react';
-import { toast } from 'react-hot-toast'; 
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import './Forms.css';
 
-const Login = ({ onSuccess }) => { 
-  const { login } = useAuth(); // <--- Usa el contexto
-  
+const Login = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+ 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,32 +29,25 @@ const Login = ({ onSuccess }) => {
           },
           body: JSON.stringify(formData),
       });
-      const data = await res.json(); 
+      const data = await res.json();
 
       if (res.ok && data.success && data.data.token) {
-        
-        // --- CAMBIO CLAVE AQUÍ ---
-        // Se pasan los DATOS DEL USUARIO y el TOKEN al contexto
-        login(data.data.user, data.data.token); 
-        // -------------------------
-        
+        login(data.data.user, data.data.token);
         console.log('Token y Usuario guardados. Contexto actualizado.');
-        toast.success('¡Login exitoso! Actualizando vista...'); 
-        
+        toast.success('¡Login exitoso!');
+       
         setTimeout(() => {
-            if (onSuccess) {
-                onSuccess(); // Esto (en App.js) cambia la vista a 'products'
-            }
+            navigate('/');
         }, 1500);
       } else {
-        const errorMessage = data.errors 
-            ? data.errors.map(err => err.msg).join(', ') 
+        const errorMessage = data.errors
+            ? data.errors.map(err => err.msg).join(', ')
             : data.message || 'Error desconocido';
-        toast.error('Error en login: ' + errorMessage); 
+        toast.error('Error en login: ' + errorMessage);
       }
     } catch (error) {
       console.error(error);
-      toast.error('Error al iniciar sesión. Revisa la consola.'); 
+      toast.error('Error al iniciar sesión. Revisa la consola.');
     }
   };
 

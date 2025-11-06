@@ -2,9 +2,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext'; // <-- 1. IMPORTAR useAuth
+import { useNavigate } from 'react-router-dom';
 
-// 2. AÑADIR 'setView' A LOS PROPS
-const ProductList = ({ refreshTrigger, setView }) => { 
+// 2. USAR navigate EN LUGAR DE setView
+const ProductList = ({ refreshTrigger }) => { 
+  const navigate = useNavigate();
   const { user, isLoggedIn } = useAuth(); // <-- 3. OBTENER USUARIO
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ const ProductList = ({ refreshTrigger, setView }) => {
   const handleContactSeller = async (sellerId, productId) => {
     if (!isLoggedIn) {
       toast.error('Debes iniciar sesión para contactar al vendedor.');
-      setView('login');
+      navigate('/login');
       return;
     }
 
@@ -103,10 +105,10 @@ const ProductList = ({ refreshTrigger, setView }) => {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        toast.success('Conversación iniciada. Redirigiendo...', { id: toastId });
-        // Guardar el ID en sessionStorage para que Messaging.js lo abra
-        sessionStorage.setItem('openConversationId', data.data._id);
-        setView('messages');
+  toast.success('Conversación iniciada. Redirigiendo...', { id: toastId });
+  // Guardar el ID en sessionStorage para que Messaging.js lo abra
+  sessionStorage.setItem('openConversationId', data.data._id);
+  navigate('/messages');
       } else {
         throw new Error(data.message || 'Error al crear la conversación');
       }

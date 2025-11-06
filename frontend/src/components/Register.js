@@ -1,13 +1,13 @@
-// Frontend/src/components/Register.js (CORREGIDO)
 import React, { useState } from 'react';
-import { toast } from 'react-hot-toast'; 
-import { useAuth } from '../context/AuthContext'; // <-- IMPORTAR
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import './Forms.css';
 
-// 'onSuccess' ahora significa "registro exitoso" (irá a 'products')
-const Register = ({ onSuccess }) => {
-  const { login } = useAuth(); // <-- USAR CONTEXTO
-    
+const Register = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+   
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -32,35 +32,28 @@ const Register = ({ onSuccess }) => {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json(); 
+      const data = await res.json();
 
       if (res.ok && data.success) {
         console.log(data);
         toast.success('✅ ¡Usuario registrado! Iniciando sesión...');
-        
-        // --- CAMBIO CLAVE AQUÍ ---
-        // Inicia sesión automáticamente al registrarse
+       
         login(data.data.user, data.data.token);
-        // -------------------------
-        
+       
         setTimeout(() => {
-            if (onSuccess) {
-                // ¡CAMBIO CLAVE! Llama al callback onSuccess para actualizar App.js
-                // (onSuccess en App.js para Register debe llevar a 'products')
-                onSuccess(); 
-            }
-        }, 1500); 
-        
+            navigate('/');
+        }, 1500);
+       
       } else {
-        const errorMessage = data.errors 
-            ? data.errors.map(err => err.msg).join(', ') 
+        const errorMessage = data.errors
+            ? data.errors.map(err => err.msg).join(', ')
             : data.message || 'Error desconocido del servidor.';
-        toast.error(`❌ Error al registrar: ${errorMessage}`); 
+        toast.error(`❌ Error al registrar: ${errorMessage}`);
       }
 
     } catch (error) {
       console.error(error);
-      toast.error('Error al registrar. Revisa la consola.'); 
+      toast.error('Error al registrar. Revisa la consola.');
     }
   };
 
