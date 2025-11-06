@@ -1,9 +1,9 @@
-// src/components/Messaging.js
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+// src/components/Messaging.js (ARREGLADO)
+import React, { useState, useEffect, useCallback } from 'react'; // AGREGADO useCallback
 import ConversationList from './ConversationList';
 import ChatWindow from './ChatWindow';
-import './Messaging.css'; // Importar el nuevo CSS
+import Spinner from './Spinner';
+import './Messaging.css';
 
 const Messaging = () => {
   const [conversations, setConversations] = useState([]);
@@ -11,44 +11,50 @@ const Messaging = () => {
   const [loading, setLoading] = useState(true);
   const PORT = 4000;
 
+  // Función para refrescar conversaciones
+  const fetchConversations = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`http://localhost:${PORT}/api/conversations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConversations(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    }
+  }, []);
+
   useEffect(() => {
-    // 1. Revisar si sessionStorage tiene un ID para abrir
     const autoOpenId = sessionStorage.getItem('openConversationId');
     if (autoOpenId) {
       setActiveConversationId(parseInt(autoOpenId));
-      sessionStorage.removeItem('openConversationId'); // Limpiar para que no se abra siempre
+      sessionStorage.removeItem('openConversationId');
     }
 
-    // 2. Cargar la lista de todas las conversaciones
-    const fetchConversations = async () => {
+    // Carga inicial
+    const initialFetch = async () => {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      try {
-        const res = await fetch(`http://localhost:${PORT}/api/conversations`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setConversations(data.data);
-        } else {
-          throw new Error(data.message || 'Error al cargar conversaciones');
-        }
-      } catch (error) {
-        toast.error(error.message);
-      } finally {
-        setLoading(false);
-      }
+      await fetchConversations();
+      setLoading(false);
     };
+    
+    initialFetch();
 
-    fetchConversations();
-  }, []);
+    // Polling para actualizar la lista cada 10 segundos
+    const intervalId = setInterval(fetchConversations, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [fetchConversations]);
 
   return (
     <div className="messaging-container">
       <div className="conversation-list-col">
         <div className="conversation-list-header">Mensajes</div>
         {loading ? (
-          <p style={{ padding: '20px' }}>Cargando...</p>
+          <Spinner size="medium" message="Cargando conversaciones..." /> 
         ) : (
           <ConversationList
             conversations={conversations}

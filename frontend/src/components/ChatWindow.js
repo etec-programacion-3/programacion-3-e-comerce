@@ -1,8 +1,9 @@
-// src/components/ChatWindow.js (MODIFICADO)
+// src/components/ChatWindow.js (MODIFICADO COMPLETO)
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
-import './Messaging.css'; // Usa el CSS compartido
+import Spinner from './Spinner'; // NUEVO
+import './Messaging.css';
 
 const ChatWindow = ({ conversationId }) => {
   const { user } = useAuth();
@@ -13,18 +14,31 @@ const ChatWindow = ({ conversationId }) => {
   const messagesEndRef = useRef(null);
   const PORT = 4000;
   
-  // Usamos una referencia para evitar que el loading del polling sea intrusivo
   const initialLoadRef = useRef(true); 
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Función para obtener los mensajes
+  // NUEVA FUNCIÓN: Marcar mensajes como leídos
+  const markMessagesAsRead = useCallback(async () => {
+    if (!conversationId) return;
+    
+    const token = localStorage.getItem('token');
+    try {
+      await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}/messages/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      // No mostrar toast para no ser intrusivo
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
+  }, [conversationId]);
+
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
     
-    // Solo mostrar "Cargando..." en la carga inicial
     if (initialLoadRef.current) {
       setLoading(true);
     }
@@ -32,7 +46,6 @@ const ChatWindow = ({ conversationId }) => {
     const token = localStorage.getItem('token');
     
     try {
-      // 1. Obtener los detalles de la conversación (solo en la carga inicial)
       if (initialLoadRef.current) {
         const convRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -45,14 +58,11 @@ const ChatWindow = ({ conversationId }) => {
         }
       }
 
-      // 2. Obtener los mensajes (esto se hace en cada polling)
       const msgRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}/messages`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const msgData = await msgRes.json();
       if (msgRes.ok) {
-        // Comparamos si los mensajes son diferentes antes de actualizar
-        // para evitar re-renders innecesarios
         setMessages(prevMessages => {
           if (JSON.stringify(prevMessages) !== JSON.stringify(msgData.data)) {
             return msgData.data;
@@ -67,34 +77,30 @@ const ChatWindow = ({ conversationId }) => {
     } finally {
       if (initialLoadRef.current) {
         setLoading(false);
-        initialLoadRef.current = false; // Marcar que la carga inicial terminó
+        initialLoadRef.current = false;
       }
     }
-  }, [conversationId]); // Depende solo de conversationId
+  }, [conversationId]);
 
-  // --- MODIFICACIÓN CLAVE: useEffect con setInterval ---
   useEffect(() => {
     if (!conversationId) return;
 
-    // Reseteamos la carga inicial al cambiar de chat
     initialLoadRef.current = true;
     
-    // 1. Cargar mensajes inmediatamente al seleccionar
     fetchMessages(); 
+    
+    // NUEVO: Marcar como leídos al abrir el chat
+    markMessagesAsRead();
 
-    // 2. Establecer el polling (ej. cada 5 segundos)
     const intervalId = setInterval(() => {
       fetchMessages();
-    }, 5000); // 5000ms = 5 segundos
+    }, 5000);
 
-    // 3. Limpiar el intervalo cuando el componente se desmonte
-    // o cuando el 'conversationId' cambie
     return () => {
       clearInterval(intervalId);
     };
     
-  }, [conversationId, fetchMessages]); // El 'fetchMessages' está en la dependencia
-  // ---------------------------------------------------
+  }, [conversationId, fetchMessages, markMessagesAsRead]);
 
   useEffect(() => {
     scrollToBottom();
@@ -118,8 +124,12 @@ const ChatWindow = ({ conversationId }) => {
       const data = await res.json();
 
       if (res.ok) {
-        setMessages(prevMessages => [...prevMessages, data.data]); // Añadir nuevo mensaje
-        setNewMessage(''); // Limpiar input
+        setMessages(prevMessages => [...prevMessages, data.data]);
+        setNewMessage('');
+        scrollToBottom();
+        
+        // NUEVO: Marcar como leídos después de enviar
+        setTimeout(() => markMessagesAsRead(), 500);
       } else {
         throw new Error(data.message || 'Error al enviar mensaje');
       }
@@ -133,10 +143,13 @@ const ChatWindow = ({ conversationId }) => {
   }
 
   if (loading && !conversation) {
-    return <div className="chat-placeholder">Cargando...</div>;
+    return (
+      <div className="chat-placeholder">
+        <Spinner size="large" message="Cargando chat..." />
+      </div>
+    );
   }
 
-  // Encontrar al otro participante
   const otherParticipant = conversation?.participants?.find(p => p._id !== user._id);
   const headerTitle = otherParticipant ? otherParticipant.username : 'Chat';
   const headerAvatar = otherParticipant ? otherParticipant.avatar : 'https://via.placeholder.com/50';
@@ -152,10 +165,17 @@ const ChatWindow = ({ conversationId }) => {
         {messages.map((msg) => (
           <div
             key={msg._id}
-            className={`message ${msg.sender._id === user._id ? 'sent' : 'received'}`}
+            className={`message ${msg.sender._id === user._id ? 'message-sent' : 'message-received'}`}
           >
-            <span className="message-sender">{msg.sender.username}</span>
-            <div className="message-content">{msg.content}</div>
+            <div className="message-content">
+              {msg.content}
+            </div>
+            <small className="message-time">
+              {new Date(msg.createdAt).toLocaleTimeString('es-AR', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
+            </small>
           </div>
         ))}
         <div ref={messagesEndRef} />
@@ -164,11 +184,14 @@ const ChatWindow = ({ conversationId }) => {
       <form onSubmit={handleSendMessage} className="chat-input-form">
         <input
           type="text"
+          placeholder="Escribe un mensaje..."
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Escribe un mensaje..."
+          className="chat-input"
         />
-        <button type="submit" className="btn btn-primary">Enviar</button>
+        <button type="submit" className="btn btn-send">
+          Enviar
+        </button>
       </form>
     </div>
   );
