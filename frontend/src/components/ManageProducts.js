@@ -1,7 +1,9 @@
-// src/components/ManageProducts.js (CORREGIDO)
+// src/components/ManageProducts.js (ACTUALIZADO)
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import './ProductManagement.css';
+import EditProductModal from './EditProductModal'; // <-- 1. Importar el modal
+import './Modal.css'; // <-- 2. Importar CSS del modal
 
 // Helper function para decodificar JWT
 const decodeToken = (token) => {
@@ -16,7 +18,8 @@ const ManageProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sellerId, setSellerId] = useState(null);
-  const PORT = 4000; // ✅ CORREGIDO: Puerto único
+  const [editingProduct, setEditingProduct] = useState(null); // <-- 3. Estado para el producto en edición
+  const PORT = 4000; 
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,7 +40,6 @@ const ManageProducts = () => {
   const fetchSellerProducts = async (id) => {
     setLoading(true);
     try {
-      // ✅ CORREGIDO: Usa puerto 4000
       const res = await fetch(`http://localhost:${PORT}/api/products/seller/${id}`);
       const data = await res.json();
 
@@ -89,9 +91,22 @@ const ManageProducts = () => {
     }
   };
 
+  // 4. Actualizar handleEdit para abrir el modal
   const handleEdit = (product) => {
-    toast('Función de edición en desarrollo', { icon: '🚧' });
-    // TODO: Implementar modal o vista de edición
+    setEditingProduct(product);
+  };
+
+  // 5. Handler para cerrar el modal
+  const handleCloseModal = () => {
+    setEditingProduct(null);
+  };
+
+  // 6. Handler para actualizar la lista después de editar
+  const handleProductUpdated = (updatedProduct) => {
+    setProducts(prevProducts =>
+      prevProducts.map(p => (p._id === updatedProduct._id ? updatedProduct : p))
+    );
+    handleCloseModal(); // Cierra el modal
   };
   
   if (loading) return <p className="loading-message">Cargando tus productos...</p>;
@@ -132,7 +147,7 @@ const ManageProducts = () => {
               </div>
               <div className="product-actions">
                 <button 
-                  onClick={() => handleEdit(product)}
+                  onClick={() => handleEdit(product)} // <-- Llamada actualizada
                   className="btn btn-warning btn-small"
                 >
                   ✏️ Editar
@@ -148,6 +163,15 @@ const ManageProducts = () => {
           ))
         )}
       </div>
+
+      {/* 7. Renderizar el modal condicionalmente */}
+      {editingProduct && (
+        <EditProductModal
+          product={editingProduct}
+          onClose={handleCloseModal}
+          onProductUpdated={handleProductUpdated}
+        />
+      )}
     </div>
   );
 };
