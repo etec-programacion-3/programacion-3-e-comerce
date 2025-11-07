@@ -1,11 +1,11 @@
-// Backend/src/routes/uploadRoutes.js
+// Backend/src/routes/UploadRoutes.js (IMPORT CORREGIDO)
 import express from 'express';
-import upload from '../config/MulterConfig.js';
+import upload from '../config/Multerconfig.js'; // ✅ CORREGIDO: Multerconfig
 import { 
   uploadImage, 
   deleteImage, 
   uploadMultipleImages 
-} from '../controllers/uploadController.js';
+} from '../controllers/Uploadcontroller.js'; // ✅ CORREGIDO: Uploadcontroller
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -17,7 +17,6 @@ const router = express.Router();
 // @route   POST /api/upload/image
 // @desc    Subir una sola imagen
 // @access  Private
-// Query params: ?type=users o ?type=products
 router.post(
   '/image',
   protect,
@@ -38,7 +37,6 @@ router.post(
 // @route   DELETE /api/upload/image/:filename
 // @desc    Eliminar una imagen
 // @access  Private
-// Query params: ?type=users o ?type=products
 router.delete(
   '/image/:filename',
   protect,

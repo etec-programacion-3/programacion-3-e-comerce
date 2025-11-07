@@ -1,4 +1,4 @@
-// Backend/src/index.js (ACTUALIZADO)
+// Backend/src/index.js (CORREGIDO - TODOS LOS IMPORTS)
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -7,13 +7,14 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { connectDB } from './config/db.js';
 
-// Importar rutas
+// ========================================
+// IMPORTAR RUTAS - NOMBRES CORREGIDOS
+// ========================================
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import productRoutes from './routes/productRoutes.js';
-import uploadRoutes from './routes/uploadRoutes.js';
+import uploadRoutes from './routes/UploadRoutes.js';  // ✅ CORREGIDO: U mayúscula
 import conversationRoutes from './routes/conversationRoutes.js';
-// ❌ Ya no importamos messageRoutes por separado
 
 // Importar middleware de manejo de errores
 import { errorHandler } from './middleware/errorHandler.js';
@@ -61,7 +62,7 @@ app.get('/', (req, res) => {
       products: '/api/products',
       upload: '/api/upload',
       conversations: '/api/conversations',
-      messages: '/api/conversations/:id/messages' // ✅ Rutas anidadas
+      messages: '/api/conversations/:id/messages'
     }
   });
 });
@@ -71,8 +72,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/upload', uploadRoutes);
-app.use('/api/conversations', conversationRoutes); // ✅ Incluye rutas de mensajes anidadas
-// ❌ Ya no montamos /api/messages por separado
+app.use('/api/conversations', conversationRoutes);
 
 // Ruta 404 - No encontrada
 app.use('*', (req, res) => {
