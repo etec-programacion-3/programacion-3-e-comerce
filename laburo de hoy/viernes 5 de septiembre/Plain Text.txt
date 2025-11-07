@@ -1,1 +1,0 @@
-Me agarre un curso de react en freecode camp, tambien hize la estructura basica de carpetas aunque aun debo configurar la base de datos

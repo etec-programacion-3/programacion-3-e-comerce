@@ -1,1 +1,0 @@
-Pase toda la clase corrigiendo un problema con las ramas y despues me asegure de que mi conexion a mi base de datos mongo db funcione 
