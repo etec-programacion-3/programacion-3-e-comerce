@@ -1,0 +1,97 @@
+// Backend/src/config/db.js
+import sequelize from './sequelizeInstance.js';
+
+// Importamos TODOS los modelos de Sequelize
+import User from '../models/userModel.js';
+import Product from '../models/productModel.js';
+// Importamos los nuevos modelos migrados
+import Conversation from '../models/conversationModel.js';
+import Message from '../models/messageModel.js';
+
+// ========================================
+// DEFINIR ASOCIACIONES ENTRE MODELOS
+// ========================================
+
+// --- Producto y Vendedor (User) ---
+User.hasMany(Product, {
+  foreignKey: 'sellerId',
+  as: 'products',
+  onDelete: 'CASCADE'
+});
+Product.belongsTo(User, {
+  foreignKey: 'sellerId',
+  as: 'seller'
+});
+
+// --- Conversaciones y Participantes (User) ---
+User.belongsToMany(Conversation, {
+  through: 'ConversationParticipants',
+  foreignKey: 'userId',
+  as: 'conversations'
+});
+Conversation.belongsToMany(User, {
+  through: 'ConversationParticipants',
+  foreignKey: 'conversationId',
+  as: 'participants'
+});
+
+// --- Mensajes (Sender y Conversation) ---
+Message.belongsTo(User, {
+  foreignKey: 'senderId',
+  as: 'sender'
+});
+User.hasMany(Message, {
+  foreignKey: 'senderId',
+  as: 'sentMessages'
+});
+
+Message.belongsTo(Conversation, {
+  foreignKey: 'conversationId',
+  onDelete: 'CASCADE'
+});
+Conversation.hasMany(Message, {
+  foreignKey: 'conversationId',
+  as: 'messages'
+});
+
+// --- Conversación y Producto ---
+Conversation.belongsTo(Product, {
+  foreignKey: 'productId',
+  as: 'product',
+  onDelete: 'SET NULL',
+  allowNull: true
+});
+// Product.hasMany(Conversation, { // <-- LÍNEAS ELIMINADAS (78-80)
+//   foreignKey: 'productId'
+// });
+
+// --- Conversación y Último Mensaje ---
+Conversation.belongsTo(Message, {
+  foreignKey: 'lastMessageId',
+  as: 'lastMessage',
+  onDelete: 'SET NULL',
+  allowNull: true
+});
+
+// ========================================
+// FUNCIÓN DE CONEXIÓN
+// ========================================
+
+const connectDB = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ SQLite Connection has been established successfully.');
+    
+    // Sincronizar modelos
+    // alter: true -> Actualiza las tablas si hay cambios en los modelos
+    await sequelize.sync({ force: false, alter: true });
+    console.log('✅ All models were synchronized successfully.');
+
+  } catch (error) {
+    console.error(`❌ Unable to connect to the database: ${error.message}`);
+    process.exit(1);
+  }
+};
+
+// Exportamos sequelize y todos los modelos
+export { connectDB, sequelize, User, Product, Conversation, Message };
