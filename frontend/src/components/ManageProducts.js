@@ -19,7 +19,6 @@ const ManageProducts = () => {
   const [loading, setLoading] = useState(true);
   const [sellerId, setSellerId] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null); // <-- 3. Estado para el producto en edición
-  const PORT = 4000; 
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -40,7 +39,7 @@ const ManageProducts = () => {
   const fetchSellerProducts = async (id) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/products/seller/${id}`);
+      const res = await fetch(`/api/products/seller/${id}`);
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -70,7 +69,7 @@ const ManageProducts = () => {
 
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/products/${productId}`, {
+      const res = await fetch(`/api/products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -31,7 +31,7 @@ const ProductList = ({ refreshTrigger }) => {
       if (filters.minPrice) queryParams.append('minPrice', filters.minPrice);
       if (filters.maxPrice) queryParams.append('maxPrice', filters.maxPrice);
       
-      const url = `http://localhost:4000/api/products?${queryParams.toString()}`;
+      const url = `/api/products?${queryParams.toString()}`;
       const res = await fetch(url);
       const data = await res.json();
 
@@ -90,7 +90,7 @@ const ProductList = ({ refreshTrigger }) => {
     const toastId = toast.loading('Iniciando conversación...');
 
     try {
-      const res = await fetch('http://localhost:4000/api/conversations', {
+      const res = await fetch('/api/conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

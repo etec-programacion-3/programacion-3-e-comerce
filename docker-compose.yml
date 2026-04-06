@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 1. NGINX: La única puerta de entrada (Puerto 80)
+  nginx:
+    image: nginx:latest
+    container_name: mercado_nginx
+    ports:
+      - "80:80" # <--- ÚNICO PUERTO EXPUESTO AL EXTERIOR
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+
+  # 2. BACKEND: Completamente oculto
+  backend:
+    build: ./Backend
+    container_name: mercado_backend
+    expose:
+      - "4000" # <--- Cambiamos "ports" por "expose" al puerto real de la app
+    tty: true        
+    stdin_open: true 
+    volumes:
+      - ./Backend/uploads:/app/uploads 
+      - ./Backend/database.sqlite:/app/database.sqlite
+    environment:
+      - PORT=4000
+      - NODE_ENV=development
+      - JWT_SECRET=hola
+      - FRONTEND_URL=http://localhost # Ahora el frontend se sirve desde el puerto 80
+
+  # 3. FRONTEND: Completamente oculto
+  frontend:
+    build: ./frontend
+    container_name: mercado_frontend
+    expose:
+      - "3000" # <--- Cambiamos "ports" por "expose"
+    environment:
+      # El navegador ahora le pedirá la API a NGINX (puerto 80 por defecto)
+      - REACT_APP_API_URL=http://localhost/api 
+      - WDS_SOCKET_PORT=0
+    depends_on:
+      - backend

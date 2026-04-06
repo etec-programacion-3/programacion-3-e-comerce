@@ -7,7 +7,6 @@ import './Modal.css'; // Importamos los estilos del modal
 
 // Copiamos las categorías de CreateProduct.js
 const categories = ['Electrónica', 'Ropa', 'Hogar', 'Deportes', 'Libros', 'Juguetes', 'Alimentos', 'Otros'];
-const PORT = 4000;
 
 const EditProductModal = ({ product, onClose, onProductUpdated }) => {
   const [formData, setFormData] = useState({
@@ -62,7 +61,7 @@ const EditProductModal = ({ product, onClose, onProductUpdated }) => {
     };
 
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/products/${product._id}`, {
+      const res = await fetch(`/api/products/${product._id}`, {
         method: 'PUT', // Usamos PUT para actualizar
         headers: {
           'Content-Type': 'application/json',

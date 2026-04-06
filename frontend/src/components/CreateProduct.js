@@ -52,7 +52,7 @@ const CreateProduct = ({ onProductCreated }) => {
     };
 
     try {
-      const res = await fetch(`http://localhost:4000/api/products`, {
+      const res = await fetch(`/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,7 +12,6 @@ const ChatWindow = ({ conversationId }) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
-  const PORT = 4000;
   
   const initialLoadRef = useRef(true); 
 
@@ -26,7 +25,7 @@ const ChatWindow = ({ conversationId }) => {
     
     const token = localStorage.getItem('token');
     try {
-      await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}/messages/read`, {
+      await fetch(`/api/conversations/${conversationId}/messages/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -47,7 +46,7 @@ const ChatWindow = ({ conversationId }) => {
     
     try {
       if (initialLoadRef.current) {
-        const convRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}`, {
+        const convRes = await fetch(`/api/conversations/${conversationId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const convData = await convRes.json();
@@ -58,7 +57,7 @@ const ChatWindow = ({ conversationId }) => {
         }
       }
 
-      const msgRes = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}/messages`, {
+      const msgRes = await fetch(`/api/conversations/${conversationId}/messages`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const msgData = await msgRes.json();
@@ -112,7 +111,7 @@ const ChatWindow = ({ conversationId }) => {
 
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/conversations/${conversationId}/messages`, {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

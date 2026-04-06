@@ -59,7 +59,7 @@ const ImageUploader = ({
       formData.append('image', file);
 
       // Subir al servidor
-      const response = await fetch(`http://localhost:4000/api/upload/image?type=${type}`, {
+      const response = await fetch(`/api/upload/image?type=${type}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

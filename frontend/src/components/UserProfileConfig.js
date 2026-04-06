@@ -27,7 +27,6 @@ const UserProfileConfig = () => {
   });
   const [userId, setUserId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const PORT = 4000;
 
   // ... (El useEffect sigue igual)
   useEffect(() => {
@@ -46,7 +45,7 @@ const UserProfileConfig = () => {
     setUserId(userPayload.id);
     const fetchUserData = async (id, token) => {
       try {
-        const res = await fetch(`http://localhost:${PORT}/api/users/${id}`, {
+        const res = await fetch(`/api/users/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -100,7 +99,7 @@ const UserProfileConfig = () => {
     };
 
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/users/${userId}`, {
+      const res = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

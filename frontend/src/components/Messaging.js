@@ -9,13 +9,12 @@ const Messaging = () => {
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const PORT = 4000;
 
   // Función para refrescar conversaciones
   const fetchConversations = useCallback(async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`http://localhost:${PORT}/api/conversations`, {
+      const res = await fetch(`/api/conversations`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
